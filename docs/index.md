@@ -89,7 +89,7 @@ YAIBA-VRC のログをアップロードするだけ。
 以下のGoogleコラボのアイコンをクリックしてください。
 
 <p align="center">
-  <a href="https://drive.google.com/file/d/15QzrKxMuM1IKwszn6yR6p85-t8mdEA--/view?usp=sharing" target="_blank" rel="noopener">
+  <a href="https://colab.research.google.com/drive/15QzrKxMuM1IKwszn6yR6p85-t8mdEA--" target="_blank" rel="noopener">
     <img src="https://colab.research.google.com/assets/colab-badge.svg" style="height:40px;">
   </a>
 </p>
