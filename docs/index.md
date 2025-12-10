@@ -1,11 +1,9 @@
-# 🌐 YAIBA-BI
-
 **非プログラマー向け VRChat 人流解析ツール**
 — YAIBA-VRC のログから、グラフや動画を自動生成 —
 
 ---
 
-## 🎯 YAIBA-BI とは？
+## YAIBA-BI とは？
 
 **YAIBA-BI は、VRChat の位置情報ログをアップロードするだけで
 移動軌跡・滞在分布・ヒートマップ・可視化動画を自動生成できるツールです。**
@@ -56,8 +54,8 @@ allowfullscreen>
 ## 🚀 使い方
 
 **STEP 1 — YAIBA-VRC をワールドに設置**
-ログ取得したいワールドに YAIBA-VRC を導入します。
-※ 詳しい導入手順は[YAIBA-VRCの導入手順](## YAIBA-VRCの導入手順)をご覧ください。
+ログ取得したいワールドに YAIBA-VRC を導入します。  
+※ 詳しい導入手順は[YAIBA-VRCの導入手順](#yaiba-bi-manual)をご覧ください。
 
 **STEP 2 — VRChat のログを取得**
 `output_log_xxxxx.txt` を VRChat から取り出します。
@@ -72,7 +70,7 @@ Google Colab にログファイルを入れると、自動でグラフ・動画�
 （ここに Colab への大きなボタンリンクを配置）
 
 ---
-
+<span id="yaiba-bi-manual"></span>
 ## YAIBA-VRCの導入手順
 
 YAIBA-VRC の Unity での導入方法は以下にまとめています：
