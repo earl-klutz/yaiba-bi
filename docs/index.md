@@ -101,7 +101,7 @@ YAIBA-VRC のログをアップロードするだけ。
 
 YAIBA-VRC の Unity での導入方法は以下にまとめています：
 
-<a href="./yaiba-bi-manual.md" target="_blank" rel="noopener">
+<a href="./yaiba-bi-manual" target="_blank" rel="noopener">
   YAIBA-VRC 導入ガイドを見る
 </a>
 
