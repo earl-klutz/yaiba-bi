@@ -103,7 +103,7 @@ YAIBA/Questionnaire/QuestionnaireGimmick
 # ３．データの取得
 
 YAIBA-VRCを使用して取得した位置情報などのデータはVRChatのログデータに記録されています。ログデータの保存場所は、デフォルトの設定では  
-C:\\Users\\ (user名)\\AppData\\LocalLow\\VRChat\\VRChat  
+C:\\Users\\ (Windowsのユーザ名)\\AppData\\LocalLow\\VRChat\\VRChat  
 に"output\_log\_YYYY-MM-DD\_hh-mm-ss.txt"のようなファイル名で保存されています。このデータを使用します。
 
 ### 注意

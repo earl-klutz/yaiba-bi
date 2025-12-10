@@ -29,25 +29,37 @@ YAIBA-BI によって **誰でも数クリックで人流解析ができる環�
 
 イベント中に「何人が来ていたのか」「ピークはいつか」を時系列で確認できます。  
 主催者がまず知りたい基礎的な指標を自動で可視化します。
-![同時接続数の推移](./images/cc_line_2025-05-17_sample.png)
+<p align="center">
+  <img src="./images/cc_line_2025-05-17_sample.png" style="max-width:700px; width:100%; border:1px solid #ddd; border-radius:6px;">
+  <br>
+  <em>同時接続数の推移（イベント中の来場人数を可視化）</em>
+</p>
 
 ### **② ヒートマップ（どこが賑わっていたかを可視化）**
 
 空間内の滞在傾向を色で表示します。  
 混雑箇所・人気スポット・回遊性の把握が可能です。
-![ヒートマップ](./images/heatmap_2D-testdata-20250516_214915_v1.0.png)
+<p align="center">
+  <img src="./images/heatmap_2D-testdata-20250516_214915_v1.0.png" style="max-width:700px; width:100%; border:1px solid #ddd; border-radius:6px;">
+  <br>
+  <em>ヒートマップ：参加者が長く滞在していた場所を色で可視化した図です。赤いほど滞在時間が長く、人気スポットや混雑箇所を把握できます。</em>
+</p>
+
 
 ### **③ アニメーション可視化（空間内の動きをそのまま再生）**
 
 参加者の動きを時間軸で再現したアニメーション動画を生成します。  
 イベント紹介やデモ用途にも役立つ直感的な可視化です。
 
-<iframe width="560" height="315" 
-src="https://www.youtube.com/embed/-LIoVicXueo" 
-title="YouTube video player" frameborder="0"
-allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-allowfullscreen>
-</iframe>
+<div style="position:relative; padding-bottom:56.25%; height:0; overflow:hidden; max-width:700px; margin:auto;">
+  <iframe 
+    src="https://www.youtube.com/embed/-LIoVicXueo"
+    style="position:absolute; top:0; left:0; width:100%; height:100%;"
+    frameborder="0"
+    allowfullscreen>
+  </iframe>
+</div>
+
 
 ---
 
@@ -59,6 +71,9 @@ allowfullscreen>
 
 **STEP 2 — VRChat のログを取得**
 `output_log_xxxxx.txt` を VRChat から取り出します。
+>YAIBA-VRCを使用して取得した位置情報などのデータはVRChatのログデータに記録されています。ログデータの保存場所は、デフォルトの設定では  
+>C:\\Users\\ (Windowsのユーザ名)\\AppData\\LocalLow\\VRChat\\VRChat  
+>に"output\_log\_YYYY-MM-DD\_hh-mm-ss.txt"のようなファイル名で保存されています。このデータを使用します。
 
 **STEP 3 — YAIBA-BI にログをアップロード**
 Google Colab にログファイルを入れると、自動でグラフ・動画が生成されます。
@@ -67,7 +82,18 @@ Google Colab にログファイルを入れると、自動でグラフ・動画�
 
 ## ▶ YAIBA-BI（Google Colab）を開く
 
-（ここに Colab への大きなボタンリンクを配置）
+### ▶ ワンクリックで解析を開始
+
+YAIBA-VRC のログをアップロードするだけ。  
+グラフ・アニメーション動画を自動生成します。  
+以下のGoogleコラボのアイコンをクリックしてください。
+
+<p align="center">
+  <a href="https://drive.google.com/file/d/15QzrKxMuM1IKwszn6yR6p85-t8mdEA--/view?usp=sharing" target="_blank" rel="noopener">
+    <img src="https://colab.research.google.com/assets/colab-badge.svg" style="height:40px;">
+  </a>
+</p>
+
 
 ---
 <span id="yaiba-bi-manual"></span>
@@ -75,8 +101,9 @@ Google Colab にログファイルを入れると、自動でグラフ・動画�
 
 YAIBA-VRC の Unity での導入方法は以下にまとめています：
 
-👉 **YAIBA-VRC 導入ガイド（詳細はこちら）**
-（あなたが書いた手順書ページへのリンクを配置）
+<a href="./yaiba-bi-manual.md" target="_blank" rel="noopener">
+  YAIBA-VRC 導入ガイドを見る
+</a>
 
 ---
 
@@ -95,8 +122,8 @@ YAIBA-BI は **DS集会「YAIBA民主化プロジェクト」** によって開�
 
 GitHub：
 
-* YAIBA-VRC：[https://github.com/ScienceAssembly/YAIBA-VRC](https://github.com/ScienceAssembly/YAIBA-VRC)
-* YAIBA：[https://github.com/ScienceAssembly/YAIBA](https://github.com/ScienceAssembly/YAIBA)
+* YAIBA-VRC：<a href="https://github.com/ScienceAssembly/YAIBA-VRC" target="_blank" rel="noopener">https://github.com/ScienceAssembly/YAIBA-VRC</a>
+* YAIBA：<a href="https://github.com/ScienceAssembly/YAIBA" target="_blank" rel="noopener">https://github.com/ScienceAssembly/YAIBA</a>
 
 ---
 
@@ -110,32 +137,15 @@ GitHub：
 
 ## ✨ Special Thanks
 
-YAIBA民主化プロジェクト メンバー
-（ぶんちんさん、いそひまさん、matunさん 他）
+YAIBA民主化プロジェクト メンバー（敬称略）：
+<a href="https://x.com/Earl_Klutz" target="_blank" rel="noopener">Earl Klutz</a>、<a href="https://x.com/bunnchinn3" target="_blank" rel="noopener">ぶんちん</a>、<a href="https://x.com/gerusuraimu" target="_blank" rel="noopener">げるすらいむ</a>、<a href="https://x.com/D3NT4KU" target="_blank" rel="noopener">電卓</a>、<a href="https://x.com/HanakaYui_vrc" target="_blank" rel="noopener">花菜果ゆい</a>、<a href="https://x.com/matsun675_vrc" target="_blank" rel="noopener">まっつ</a>、<a href="https://x.com/IsoKan_DD" target="_blank" rel="noopener">いそひま</a>
 
 ---
 
 ## 💬 お問い合わせ / 連絡先
 
-（X アカウント or Discordサーバーリンクなどを配置）
+<a href="https://x.com/Earl_Klutz" target="_blank" rel="noopener">Earl Klutz</a>
 
 ---
-
-# 🔧 次にできること
-
-* ページ全体のレイアウト（画像位置・ボタンデザイン）
-* Colab ボタンのデザイン生成
-* 埋め込み動画の最適化
-* 導入手順ページの Markdown 版の作成
-
----
-
-必要であれば、
-**この文章をそのまま GitHub Pages に組み込む HTML/CSS 版**
-や
-**サイト全体のワイヤーフレーム**
-も作成できます。
-
-次にどこを調整しますか？
 
 
