@@ -57,7 +57,7 @@ allowfullscreen>
 
 **STEP 1 — YAIBA-VRC をワールドに設置**
 ログ取得したいワールドに YAIBA-VRC を導入します。
-※ 詳しい導入手順は[YAIBA-VRC の導入手順](## YAIBA-VRC の導入手順)をご覧ください。
+※ 詳しい導入手順は[YAIBA-VRCの導入手順](## YAIBA-VRCの導入手順)をご覧ください。
 
 **STEP 2 — VRChat のログを取得**
 `output_log_xxxxx.txt` を VRChat から取り出します。
@@ -73,7 +73,7 @@ Google Colab にログファイルを入れると、自動でグラフ・動画�
 
 ---
 
-## YAIBA-VRC の導入手順
+## YAIBA-VRCの導入手順
 
 YAIBA-VRC の Unity での導入方法は以下にまとめています：
 
@@ -139,4 +139,5 @@ YAIBA民主化プロジェクト メンバー
 も作成できます。
 
 次にどこを調整しますか？
+
 
