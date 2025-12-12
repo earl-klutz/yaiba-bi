@@ -146,6 +146,12 @@ YAIBA民主化プロジェクト メンバー（敬称略）：
 
 <a href="https://x.com/Earl_Klutz" target="_blank" rel="noopener">Earl Klutz</a>
 
+### YAIBA-BI Git-Hub
+
+YAIBA-BIに関するissueなどは以下よりお願いします。  
+<a href="https://github.com/earl-klutz/yaiba-bi" target="_blank" rel="noopener">
+  YAIBA-BI Git-Hub
+</a>
 ---
 
 
