@@ -157,6 +157,9 @@ YAIBA-BIに関するissueなどは以下よりお願いします。
 <a href="https://github.com/earl-klutz/yaiba-bi" target="_blank" rel="noopener">
   YAIBA-BI Git-Hub
 </a>
+
+ 　　
 ---
+
 
 
