@@ -1,4 +1,5 @@
 ---
+layout: default
 title: YAIBA-VRC 導入ガイド
 ---
 # YAIBA-VRC導入とデータ取得の方法

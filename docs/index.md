@@ -1,3 +1,7 @@
+---
+layout: default
+title: YAIBA-BI 公式ドキュメント
+---
 **非プログラマー向け VRChat 人流解析ツール**
 — YAIBA-VRC のログから、グラフや動画を自動生成 —
 
@@ -145,6 +149,7 @@ YAIBA民主化プロジェクト メンバー（敬称略）：
 ## 💬 お問い合わせ / 連絡先
 
 <a href="https://x.com/Earl_Klutz" target="_blank" rel="noopener">Earl Klutz</a>
+
 
 ### YAIBA-BI Git-Hub
 
