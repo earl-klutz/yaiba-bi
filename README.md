@@ -4,18 +4,23 @@ YAIBA Democratization は VRChat ギミック "YAIBA" が出力するログを�
 
 ## Requirements
 - Python 3.10 or later (developed with 3.12)
-- pip
+- [uv](https://docs.astral.sh/uv/)
 
 ## Setup
-1. Create and activate a virtual environment.
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate
-   ```
-2. Install dependencies.
-   ```bash
-   pip install -r requirements.txt
-   ```
+1. 仮想環境を作成し、ライブラリをインストールする
+```bash
+uv sync
+# 本番環境を再現する場合:
+uv sync --no-dev
+```
+
+2. 仮想環境をアクティベートする
+```bash
+# mac/linux環境
+source .venv/bin/activate
+# windows環境
+.venv\Scripts\activate
+```
 
 ## Usage
 ### 1. Data import & preprocessing
@@ -36,11 +41,13 @@ YAIBA や VRChat のログを標準形式 (pandas DataFrame) に変換します�
 を参照してください。
 
 ## Tests
-The project plans to use `pytest` for testing.
+pytestをテストツールとして採用しています。実行する時はuvコマンド上で実行してください。
 ```bash
-pytest
+uv run pytest
+
+# 特定ファイルの失敗したテストのみテスト
+uv run pytest tests/test_foo.py --lf
 ```
-(Currently no test cases are bundled.)
 
 ## Directory Structure
 - `docs/` – design documents and glossary
@@ -48,4 +55,3 @@ pytest
 
 ## License
 This project is licensed under the terms of the MIT License. See the `LICENSE` file for details.
-

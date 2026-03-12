@@ -1,40 +1,26 @@
-[build-system]
-requires = ["setuptools>=64", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "yaiba-bi"
-version = "0.0.0"
-description = "Tools for analyzing and visualizing YAIBA VRChat logs"
+version = "0.1.0"
+description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.10"
-license = {file = "LICENSE"}
-authors = [
-    {name = "YAIBA Democratization Project"}
-]
 dependencies = [
-    "matplotlib",
-    "numpy",
-    "pandas",
-    "pyarrow",
-    "PyYAML",
-    "scipy",
-]
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+    "matplotlib>=3.10.8",
+    "numpy>=2.2.6",
+    "pandas>=2.3.3",
+    "pyarrow>=23.0.1",
+    "pytz>=2025.2",
+    "scipy>=1.15.3",
+    "tqdm>=4.67.3",
+    "tzdata>=2025.3",
+    "yaiba @ git+https://github.com/ScienceAssembly/YAIBA"
 ]
 
-[project.urls]
-Homepage = "https://github.com/YAIBA-democratization/YAIBA-democratization"
-"Bug Tracker" = "https://github.com/YAIBA-democratization/YAIBA-democratization/issues"
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]
 
-[tool.setuptools]
-package-dir = {"" = "src"}
-
-[tool.setuptools.packages.find]
-where = ["src"]
+[build-system]
+requires = ["uv_build>=0.9.10,<0.10.0"]
+build-backend = "uv_build"
