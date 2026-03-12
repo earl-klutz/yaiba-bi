@@ -1,9 +1,13 @@
 [project]
 name = "yaiba-bi"
 version = "0.1.0"
-description = "Add your description here"
+description = "Tools for analyzing and visualizing YAIBA VRChat logs"
 readme = "README.md"
 requires-python = ">=3.10"
+license = {file = "LICENSE"}
+authors = [
+    {name = "YAIBA Democratization Project"}
+]
 dependencies = [
     "matplotlib>=3.10.8",
     "numpy>=2.2.6",
@@ -15,6 +19,11 @@ dependencies = [
     "tzdata>=2025.3",
     "yaiba @ git+https://github.com/ScienceAssembly/YAIBA"
 ]
+
+[project.urls]
+Homepage = "https://github.com/YAIBA-democratization/YAIBA-democratization"
+"Bug Tracker" = "https://github.com/YAIBA-democratization/YAIBA-democratization/issues"
+
 
 [dependency-groups]
 dev = [
