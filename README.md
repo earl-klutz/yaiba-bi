@@ -49,6 +49,11 @@ uv run pytest
 uv run pytest tests/test_foo.py --lf
 ```
 
+## MkDocs開発用サーバーの起動
+```bash
+uv run mkdocs serve --livereload
+```
+
 ## Directory Structure
 - `docs/` – design documents and glossary
 - `LICENSE` – MIT license
