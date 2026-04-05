@@ -1,3 +1,12 @@
+"""Heatmapの生成を行う
+
+Attributes:
+    JST (datetime.timezone): 日本標準時
+    fonts (list): matplotlibの対応フォント一覧
+    font_list (list): NotoSansCJKフォントの抽出後リスト
+"""
+
+
 import os
 import logging
 from dataclasses import dataclass
