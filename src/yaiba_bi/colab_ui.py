@@ -29,7 +29,7 @@ def __iters() -> Iterator[str]:
     Google Colab をUIとして活用する際に使用する拡張機能 (private関数)
 
     Returns:
-        Iterator: INPUT -> INTERMEDIATE -> OUTPUT の順で値を返す
+        INPUT -> INTERMEDIATE -> OUTPUT の順で値を返す
     """
 
     yield INPUT
