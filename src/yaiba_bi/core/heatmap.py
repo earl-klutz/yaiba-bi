@@ -40,16 +40,33 @@ else:
 
 @dataclass
 class Theme:
+    """出力するヒートマップのテーマを設定するデータ構造体
+
+    Attributes:
+        cmap (str): ヒートマップに使用するカラーマップのテーマ
+        image_size_px (Tuple[int, int]): 出力するヒートマップの基準サイズ
+        dpi (int): 出力する画像の細かさ(dot per inch)
+    """
+
     cmap: str = "viridis"
     image_size_px: Tuple[int, int] = (1280, 720)
     dpi: int = 144
 
     @property
     def size(self) -> Tuple[float, float]:
+        """画像サイズをインチ単位で返す
+
+        Returns:
+            (width_inch, height_inch)の形式の画像サイズ
+        """
         return self.image_size_px[0] / self.dpi, self.image_size_px[1] / self.dpi
 
 
 class HeatmapGenerator:
+    """
+
+    """
+
     gaussian_sigma_ratio: float = 0.05
     percentile_clip: Tuple[int, int] = (1, 99)
     min_unique_seconds: int = 10
@@ -62,6 +79,10 @@ class HeatmapGenerator:
         overwrite: bool = False,
         theme: Optional[Theme] = None
     ) -> None:
+        """
+
+        """
+
         self.boundary = boundary
 
         # resolution: grid_resolution 5-100、範囲外は自動補正
@@ -87,6 +108,10 @@ class HeatmapGenerator:
         lower_percentile: int = 1,
         upper_percentile: int = 99
     ) -> pd.DataFrame:
+        """
+
+        """
+
         # データ点が少ない・指定不正は安全スキップ
         if not (0 <= lower_percentile < upper_percentile <= 100):
             self.logger.warning("[-2301] percentile_clip が不正のためスキップ")
@@ -122,6 +147,10 @@ class HeatmapGenerator:
         resolution: int,
         bounds: Area
     ) -> np.ndarray:
+        """
+
+        """
+
         x_edges = np.linspace(bounds.x_min, bounds.x_max, resolution + 1)
         z_edges = np.linspace(bounds.z_min, bounds.z_max, resolution + 1)
         h, xe, ze = np.histogram2d(
@@ -137,6 +166,10 @@ class HeatmapGenerator:
         grid_data: np.ndarray,
         sigma_bins: Optional[int] = None
     ) -> np.ndarray:
+        """
+
+        """
+
         if sigma_bins is None:
             sigma_bins = max(1, round(self.grid_resolution * self.gaussian_sigma_ratio))
         if sigma_bins <= 0:
@@ -148,6 +181,10 @@ class HeatmapGenerator:
         grid_data: np.ndarray,
         method: str = "minmax"
     ) -> np.ndarray:
+        """
+
+        """
+
         if method != "minmax":
             return grid_data
         g_min = np.nanmin(grid_data)
@@ -161,6 +198,10 @@ class HeatmapGenerator:
         grid_counts: np.ndarray,
         metric: str = "density"
     ) -> np.ndarray:
+        """
+
+        """
+
         if metric == "count":
             return grid_counts
         # density: 正規化は後段で行うためそのまま返す（スムージング前の値）
@@ -173,6 +214,10 @@ class HeatmapGenerator:
         theme: Theme,
         metric: str
     ) -> plt.Figure:
+        """
+
+        """
+
         fig, ax = plt.subplots(figsize=theme.size, dpi=theme.dpi)
         ax.set_aspect("equal")
 
@@ -214,6 +259,10 @@ class HeatmapGenerator:
         fig: plt.Figure,
         path: str
     ) -> None:
+        """
+
+        """
+
         if os.path.exists(path) and not self.overwrite:
             raise FileExistsError(f"[-2701] 既存ファイルあり（overwrite=False）: {path}")
         fig.savefig(path, bbox_inches="tight")
@@ -227,6 +276,10 @@ class HeatmapGenerator:
         save_dir: str = "",
         metric: str = "density"
     ) -> None:
+        """
+
+        """
+
         try:
             # 入力検証
             df1 = clip_by_boundary(df, self.boundary)
@@ -272,6 +325,16 @@ def clip_by_boundary(
     df: pd.DataFrame,
     boundary: Area
 ) -> pd.DataFrame:
+    """指定した範囲内でデータを切り取る関数
+
+    Arguments:
+        df (pd.DataFrame): YAIBAのログから抽出したログデータのデータ配列(pandas)
+        boundary (Area): 切り取り範囲
+
+    Returns:
+        切り取り処理後のデータ配列(pandas)
+    """
+
     mask = (
             (df["location_x"] >= boundary.x_min) & (df["location_x"] <= boundary.x_max) &
             (df["location_z"] >= boundary.z_min) & (df["location_z"] <= boundary.z_max)
@@ -282,6 +345,15 @@ def clip_by_boundary(
 def get_logger(
     run_id: str
 ) -> logging.Logger:
+    """ロガーを作成する関数
+
+    Arguments:
+        run_id (str): ログの識別子
+
+    Returns:
+        Loggerオブジェクト
+    """
+
     logger = logging.getLogger(run_id)
     logger.setLevel(logging.INFO)
     if not logger.handlers:
