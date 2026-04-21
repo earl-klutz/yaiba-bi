@@ -48,10 +48,20 @@ class SpecError(Exception):
 
     @property
     def code(self) -> int:  # pragma: no cover
+        """エラーコードを返す。
+
+        Returns:
+            int: 仕様書で定義されたエラーコード。
+        """
         return self.info.code
 
     @property
     def message(self) -> str:  # pragma: no cover
+        """エラーメッセージを返す。
+
+        Returns:
+            str: エラーの詳細メッセージ。
+        """
         return self.info.message
 
 
