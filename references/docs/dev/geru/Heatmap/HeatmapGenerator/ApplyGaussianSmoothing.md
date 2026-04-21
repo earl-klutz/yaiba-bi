@@ -1,0 +1,1 @@
+::: yaiba_bi.core.heatmap.HeatmapGenerator.apply_gaussian_smoothing

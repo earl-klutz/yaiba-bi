@@ -63,8 +63,13 @@ class Theme:
 
 
 class HeatmapGenerator:
-    """
+    """ヒートマップ画像を出力する機能を提供するクラス
 
+    Attributes:
+        gaussian_sigma_ratio (float): a
+        percentile_clip (Tuple[int, int]): b
+        min_unique_seconds (int): c
+        normalize_method (str): d
     """
 
     gaussian_sigma_ratio: float = 0.05
@@ -79,8 +84,13 @@ class HeatmapGenerator:
         overwrite: bool = False,
         theme: Optional[Theme] = None
     ) -> None:
-        """
+        """HeatmapGeneratorのコンストラクタ
 
+        Arguments:
+            boundary (Area): 分析対象となる範囲
+            resolution (int): グリッドあたりの解像度
+            overwrite (bool): ヒートマップ画像出力時に上書きを許すかのフラグ
+            theme (Optional[Theme]): 描画するヒートマップのテーマ（色など）の設定用データ構造体
         """
 
         self.boundary = boundary
@@ -108,8 +118,15 @@ class HeatmapGenerator:
         lower_percentile: int = 1,
         upper_percentile: int = 99
     ) -> pd.DataFrame:
-        """
+        """データを上下限の閾値で足切りする関数
 
+        Arguments:
+            df (pd.DataFrame): パース後のYAIBAログデータ
+            lower_percentile (int): 下限閾値
+            upper_percentile (int): 上限閾値
+
+        Returns:
+            pd.DataFrame: 足切り後のログデータ
         """
 
         # データ点が少ない・指定不正は安全スキップ
@@ -147,8 +164,15 @@ class HeatmapGenerator:
         resolution: int,
         bounds: Area
     ) -> np.ndarray:
-        """
+        """グリッド状にデータを集計し、ヒートマップ用配列を返す
 
+        Arguments:
+            df (pd.DataFrame): 描画対象になるYAIBAログデータ
+            resolution (int): グリッドあたりの解像度
+            bounds (Area): 分析対象になる範囲
+
+        Returns:
+            np.ndarray: ヒートマップ用配列
         """
 
         x_edges = np.linspace(bounds.x_min, bounds.x_max, resolution + 1)
@@ -166,8 +190,14 @@ class HeatmapGenerator:
         grid_data: np.ndarray,
         sigma_bins: Optional[int] = None
     ) -> np.ndarray:
-        """
+        """ヒートマップ配列にガウシアン平滑化処理をかける
 
+        Arguments:
+            grid_data (np.ndarray): 平滑化処理を適用するヒートマップ配列
+            sigma_bins (Optional[int]): 平滑化処理でぼかす範囲を指定する
+
+        Returns:
+            np.ndarray: 平滑化処理後のヒートマップ配列
         """
 
         if sigma_bins is None:
@@ -181,8 +211,14 @@ class HeatmapGenerator:
         grid_data: np.ndarray,
         method: str = "minmax"
     ) -> np.ndarray:
-        """
+        """ヒートマップ配列を正規化処理する
 
+        Arguments:
+            grid_data (np.ndarray): 正規化処理を適用するヒートマップ配列
+            method (str): 正規化処理をコントロールする値
+
+        Returns:
+            np.ndarray: method == "minmax"の時は正規化後のヒートマップ配列, それ以外は何もしない
         """
 
         if method != "minmax":
@@ -198,7 +234,9 @@ class HeatmapGenerator:
         grid_counts: np.ndarray,
         metric: str = "density"
     ) -> np.ndarray:
-        """
+        """現状特に何もしていない...
+
+        誰やねんこんな関数作ったの。
 
         """
 
@@ -214,8 +252,16 @@ class HeatmapGenerator:
         theme: Theme,
         metric: str
     ) -> plt.Figure:
-        """
+        """ヒートマップを作成する
 
+        Arguments:
+            grid_data (np.ndarray): ヒートマップのデータソース
+            bounds (Area): ヒートマップの描画範囲
+            theme (Theme): ヒートマップのテーマ
+            metric (str): 正規化処理をコントロールする値
+
+        Returns:
+            plt.Figure: ヒートマップ画像(matplotlib形式)
         """
 
         fig, ax = plt.subplots(figsize=theme.size, dpi=theme.dpi)
@@ -259,8 +305,11 @@ class HeatmapGenerator:
         fig: plt.Figure,
         path: str
     ) -> None:
-        """
+        """作成したヒートマップ画像を保存する
 
+        Arguments:
+            fig (plt.Figure): 作成したヒートマップ(matplotlib形式)
+            path (str): 保存先のPATH
         """
 
         if os.path.exists(path) and not self.overwrite:
@@ -276,8 +325,13 @@ class HeatmapGenerator:
         save_dir: str = "",
         metric: str = "density"
     ) -> None:
-        """
+        """ヒートマップを作成する機能を一括で提供するAPI
 
+        Arguments:
+            df (pd.DataFrame): 作成するヒートマップの元データ配列
+            output_basename (str): 出力する画像のファイル名
+            save_dir (str): 画像の保存先ディレクトリ
+            metric (str): 正規化処理をコントロールする値
         """
 
         try:
@@ -329,7 +383,7 @@ def clip_by_boundary(
 
     Arguments:
         df (pd.DataFrame): YAIBAのログから抽出したログデータのデータ配列(pandas)
-        boundary (Area): 切り取り範囲
+        boundary (Area): 分析対象の範囲
 
     Returns:
         切り取り処理後のデータ配列(pandas)
