@@ -394,7 +394,7 @@ class EventLogVisualizer:
         threshold = median_gap * break_gap_factor
 
         segments = np.split(df_sorted, np.where(diffs > threshold)[0] + 1)
-        return [segment for segment in segments if not segment.empty]
+        return [pd.DataFrame(seg, columns=df_sorted.columns) for seg in segments if len(seg) > 0]
 
     @staticmethod
     def _color_for(index: int) -> str:
