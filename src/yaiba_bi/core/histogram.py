@@ -173,16 +173,11 @@ def log_summary(logger: logging.Logger, stats: Dict):
 class HistogramGenerator:
     """滞在時間ヒストグラムを生成します。
 
-    Args:
-        なし。
-
-    Returns:
-        None: インスタンス生成時は値を返しません。
     """
     def __init__(
         self, io: IOParams, hist: HistParams,
         ver: Union[VerParams, str, None]
-    ):
+    ) -> None:
         """ヒストグラム生成器を初期化します。
 
         Args:

@@ -118,11 +118,6 @@ def _ensure_dir(p: str, logger: logging.Logger) -> None:
 class MovieGenerator:
     """位置データから動画を生成します。
 
-    Args:
-        なし。
-
-    Returns:
-        None: インスタンス生成時は値を返しません。
     """
     def __init__(
         self,
