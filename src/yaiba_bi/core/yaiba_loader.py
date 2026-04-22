@@ -145,14 +145,14 @@ schema_intermediate = {
 
 
 
-def load_session_log(log_file: str):
+def load_session_log(log_file: str) -> yaiba.SessionLog:
     """VRChatログファイルを読み込みセッションログを返す。
 
     Args:
         log_file (str): 読み込むログファイルのパス。
 
     Returns:
-        Any: YAIBAがパースしたセッションログオブジェクト。
+        yaiba.SessionLog: YAIBAがパースしたセッションログオブジェクト。
 
     Raises:
         ValueError: ファイルが存在しない・アクセス不可・読み込み失敗・
