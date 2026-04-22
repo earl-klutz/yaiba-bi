@@ -177,13 +177,16 @@ class HistogramGenerator:
     def __init__(
         self, io: IOParams, hist: HistParams,
         ver: Union[VerParams, str, None]
-    ):
+    ) -> None:
         """ヒストグラム生成器を初期化します。
 
         Args:
             io (IOParams): 出力設定です。
             hist (HistParams): ヒストグラム設定です。
             ver (Union[VerParams, str, None]): バージョン設定です。
+
+        Returns:
+            None: 初期化のみ行います。
         """
         self.io = io
         self.hist = hist
