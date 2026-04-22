@@ -80,12 +80,28 @@ REQUIRED_COLS = {"user_id", "second"}
 
 
 def require_columns(df: pd.DataFrame):
+    """必須列の有無を検証します。
+
+    Args:
+        df (pd.DataFrame): 入力データです。
+
+    Returns:
+        None: 必須列が揃っていれば何も返しません。
+    """
     missing = REQUIRED_COLS - set(df.columns)
     if missing:
         raise ValueError(f"missing columns: {sorted(missing)}")
 
 
 def _default_hist_out_dir() -> str:
+    """ヒストグラム出力先の既定パスを返します。
+
+    Args:
+        なし。
+
+    Returns:
+        str: 既定の出力ディレクトリです。
+    """
     """
     設計書準拠: YAIBA_RESULT_ROOT/histograms
     ※ 環境変数が無ければ naming.RESULT_ROOT を既定値に
@@ -95,6 +111,15 @@ def _default_hist_out_dir() -> str:
 
 
 def build_paths(io: IOParams, base: str) -> Tuple[str, str]:
+    """PNG と CSV の出力パスを生成します。
+
+    Args:
+        io (IOParams): 出力設定です。
+        base (str): 出力ファイルのベース名です。
+
+    Returns:
+        Tuple[str, str]: PNG と CSV の出力パスです。
+    """
     out_dir = io.out_dir or _default_hist_out_dir()
     Path(out_dir).mkdir(parents=True, exist_ok=True)
     png_path = str(Path(out_dir) / f"{base}.png")
@@ -103,6 +128,15 @@ def build_paths(io: IOParams, base: str) -> Tuple[str, str]:
 
 
 def to_jst_floor_seconds(df: pd.DataFrame, logger: logging.Logger) -> pd.DataFrame:
+    """second 列を JST 秒単位へ正規化します。
+
+    Args:
+        df (pd.DataFrame): 入力データです。
+        logger (logging.Logger): ロガーです。
+
+    Returns:
+        pd.DataFrame: JST 正規化後のデータです。
+    """
     """second列をJSTに正規化し、sec_floor(秒床)を付与。重複(user_id×sec_floor)は後勝ち1件。
     返却: [second(JST), sec_floor(JST), user_id, event_day(YYYY-MM-DD)]
     """
@@ -124,12 +158,41 @@ def to_jst_floor_seconds(df: pd.DataFrame, logger: logging.Logger) -> pd.DataFra
 
 
 def log_summary(logger: logging.Logger, stats: Dict):
+    """要約情報をログへ出力します。
+
+    Args:
+        logger (logging.Logger): ロガーです。
+        stats (Dict): 出力する要約情報です。
+
+    Returns:
+        None: ログ出力のみ行います。
+    """
     logger.info("SUMMARY " + json.dumps(stats, ensure_ascii=False))
 
 # ====== 本体 ======
 class HistogramGenerator:
-    """滞在時間ヒストグラムを生成するクラス（設計準拠）。"""
-    def __init__(self, io: IOParams, hist: HistParams, ver: Union[VerParams, str, None]):
+    """滞在時間ヒストグラムを生成します。
+
+    Args:
+        なし。
+
+    Returns:
+        None: インスタンス生成時は値を返しません。
+    """
+    def __init__(
+        self, io: IOParams, hist: HistParams,
+        ver: Union[VerParams, str, None]
+    ):
+        """ヒストグラム生成器を初期化します。
+
+        Args:
+            io (IOParams): 出力設定です。
+            hist (HistParams): ヒストグラム設定です。
+            ver (Union[VerParams, str, None]): バージョン設定です。
+
+        Returns:
+            None: 初期化のみ行います。
+        """
         self.io = io
         self.hist = hist
         # ver は VerParams / str / None / dict いずれも許容
@@ -145,6 +208,14 @@ class HistogramGenerator:
 
     # --- 在室時間サマリ作成 ---
     def compute_dwell_summary(self, df: pd.DataFrame) -> pd.DataFrame:
+        """ユーザ別の在室時間サマリを作成します。
+
+        Args:
+            df (pd.DataFrame): 入力データです。
+
+        Returns:
+            pd.DataFrame: 在室秒数と在室分を持つサマリです。
+        """
         """ユーザ別の在室秒/分サマリ DataFrame を返す。
         入力: 必須列 user_id, second（任意: event_day）
         出力列: user_id, dwell_seconds, dwell_minutes, event_day
@@ -163,7 +234,18 @@ class HistogramGenerator:
         return out.reset_index()[["user_id", "dwell_seconds", "dwell_minutes", "event_day"]]
 
     # --- 描画 ---
-    def draw_histogram(self, data: np.ndarray) -> Tuple[plt.Figure, plt.Axes, Dict[str, float]]:
+    def draw_histogram(
+        self, data: np.ndarray
+    ) -> Tuple[plt.Figure, plt.Axes, Dict[str, float]]:
+        """ヒストグラムを描画して統計量を返します。
+
+        Args:
+            data (np.ndarray): 在室分データです。
+
+        Returns:
+            Tuple[plt.Figure, plt.Axes, Dict[str, float]]:
+                図、軸、統計量です。
+        """
         # ピクセル基準に統一（width/height は px と解釈）
         dpi_base = float(self.hist.dpi or self.io.png_dpi or 144)
         if self.hist.width and self.hist.height:
@@ -198,6 +280,15 @@ class HistogramGenerator:
 
     # --- 実行フロー（設計準拠シグネチャ） ---
     def run(self, df: pd.DataFrame, output_basename: str) -> Dict:
+        """ヒストグラム生成処理を一括で実行します。
+
+        Args:
+            df (pd.DataFrame): 入力データです。
+            output_basename (str): 出力名のベースです。
+
+        Returns:
+            Dict: 出力先や統計量を含む結果です。
+        """
         tracemalloc.start()
         try:
             if df is None or len(df) == 0:
@@ -264,19 +355,19 @@ def run_histogram_mvp(
     output_basename: Optional[str] = None,
     logger: Optional[logging.Logger] = None,
 ) -> Dict:
-    """MVP: 滞在時間ヒストグラムを生成して PNG/CSV を出力し、要約を返す。
+    """滞在時間ヒストグラムを簡易実行します。
 
     Args:
-        df: 入力 DataFrame（列: second, user_id, (任意)event_day）。csv_path とどちらか必須。
-        csv_path: 入力 CSV/Parquet のパス。
-        io: 出力やファイル名設定。未指定でも OK（設計既定パスに保存）。
-        hist: ヒスト設定（bins 等）。未指定ならデフォルト。
-        ver: バージョン付与。VerParams でも "v1" のような文字列でも可。
-        output_basename: ファイル名のベース。未指定なら io.output_filename を使用。
-        logger: 任意のロガー。
+        df (Optional[pd.DataFrame]): 入力データです。
+        csv_path (Optional[Union[str, os.PathLike]]): 入力ファイルです。
+        io (Optional[IOParams]): 出力設定です。
+        hist (Optional[HistParams]): ヒストグラム設定です。
+        ver (Optional[Union[VerParams, str]]): バージョン設定です。
+        output_basename (Optional[str]): 出力名のベースです。
+        logger (Optional[logging.Logger]): 任意のロガーです。
 
     Returns:
-        dict: { png, csv, users, mean, median, p95, mem_kb_diff }
+        Dict: 出力先や統計量を含む結果です。
     """
     if logger is None:
         logger = logging.getLogger("yaiba_bi.core.histogram")

@@ -75,6 +75,14 @@ MovieIOParams = IOParams
 
 
 def _resolve_bitrate_kbps(movie: MovieParams) -> int:
+    """ビットレート設定を kbps に正規化します。
+
+    Args:
+        movie (MovieParams): 動画設定です。
+
+    Returns:
+        int: 正規化後のビットレートです。
+    """
     val = getattr(movie, "bitrate_kbps", None)
     if isinstance(val, (int, float)) and val > 0:
         return int(val)
@@ -92,6 +100,15 @@ def _resolve_bitrate_kbps(movie: MovieParams) -> int:
     return 2000
 
 def _ensure_dir(p: str, logger: logging.Logger) -> None:
+    """出力先ディレクトリを作成します。
+
+    Args:
+        p (str): 出力先パスです。
+        logger (logging.Logger): ロガーです。
+
+    Returns:
+        None: ディレクトリ作成のみ行います。
+    """
     try:
         os.makedirs(os.path.dirname(p) if os.path.splitext(p)[1] else p, exist_ok=True)
     except Exception as e:
@@ -99,6 +116,14 @@ def _ensure_dir(p: str, logger: logging.Logger) -> None:
         raise PipelineError(EC_STORAGE_DST_INVALID, f"出力先フォルダ作成失敗: {p}") from e
 
 class MovieGenerator:
+    """位置データから動画を生成します。
+
+    Args:
+        なし。
+
+    Returns:
+        None: インスタンス生成時は値を返しません。
+    """
     def __init__(
         self,
         boundary: Optional[Dict[str, float]] = None,
@@ -109,6 +134,20 @@ class MovieGenerator:
         io: IOParams = IOParams(),
         ver: str = "c2.0",
     ) -> None:
+        """動画生成器を初期化します。
+
+        Args:
+            boundary (Optional[Dict[str, float]]): 描画境界です。
+            theme (Theme): 描画テーマです。
+            movie (MovieParams): 動画設定です。
+            point (PointParams): 点描画設定です。
+            trail (TrailParams): 軌跡描画設定です。
+            io (IOParams): 出力設定です。
+            ver (str): バージョン文字列です。
+
+        Returns:
+            None: 初期化のみ行います。
+        """
         self.boundary = boundary or {}
         self.theme = theme
         self.movie = movie
@@ -119,6 +158,15 @@ class MovieGenerator:
 
     # --- 準備 ---
     def prepare(self, df: pd.DataFrame, logger: logging.Logger) -> pd.DataFrame:
+        """描画前の入力データを整形します。
+
+        Args:
+            df (pd.DataFrame): 入力データです。
+            logger (logging.Logger): ロガーです。
+
+        Returns:
+            pd.DataFrame: 描画可能な前処理後データです。
+        """
         require_columns(df)
         df = drop_invalid_types(df, logger)
 
@@ -155,7 +203,19 @@ class MovieGenerator:
         return df
 
     # --- 描画 ---
-    def render(self, df: pd.DataFrame, logger: logging.Logger) -> Tuple[animation.FuncAnimation, Dict]:
+    def render(
+        self, df: pd.DataFrame, logger: logging.Logger
+    ) -> Tuple[animation.FuncAnimation, Dict]:
+        """前処理済みデータからアニメーションを生成します。
+
+        Args:
+            df (pd.DataFrame): 前処理済みデータです。
+            logger (logging.Logger): ロガーです。
+
+        Returns:
+            Tuple[animation.FuncAnimation, Dict]:
+                アニメーションと描画情報です。
+        """
         xmn = self.boundary.get("location_x_min", float(df["location_x"].min()))
         xmx = self.boundary.get("location_x_max", float(df["location_x"].max()))
         zmn = self.boundary.get("location_z_min", float(df["location_z"].min()))
@@ -269,7 +329,20 @@ class MovieGenerator:
         return anim, info
 
     # --- 保存（tqdm進捗・fps間引き） ---
-    def save_mp4(self, anim: animation.FuncAnimation, out_path: str, logger: logging.Logger) -> str:
+    def save_mp4(
+        self, anim: animation.FuncAnimation, out_path: str,
+        logger: logging.Logger
+    ) -> str:
+        """アニメーションを MP4 として保存します。
+
+        Args:
+            anim (animation.FuncAnimation): 保存対象です。
+            out_path (str): 出力先パスです。
+            logger (logging.Logger): ロガーです。
+
+        Returns:
+            str: 保存した MP4 のパスです。
+        """
         try:
             br = _resolve_bitrate_kbps(self.movie)
             writer = animation.FFMpegWriter(
@@ -306,7 +379,19 @@ class MovieGenerator:
             raise PipelineError(EC_STORAGE_IO, "I/O例外") from e
 
     # --- 一括実行 ---
-    def run(self, df: pd.DataFrame, output_basename: Optional[str] = None) -> Dict[str, str | int]:
+    def run(
+        self, df: pd.DataFrame,
+        output_basename: Optional[str] = None
+    ) -> Dict[str, str | int]:
+        """動画生成処理を一括で実行します。
+
+        Args:
+            df (pd.DataFrame): 入力データです。
+            output_basename (Optional[str]): 出力名のベースです。
+
+        Returns:
+            Dict[str, str | int]: 結果情報です。
+        """
         dt_jst = datetime.now(TZ_JST).strftime("%Y%m%d_%H%M%S")
         mpaths = meta_paths(dt_jst, self.ver)
         logger = get_logger(run_id=dt_jst, log_path=mpaths["log_path"])
@@ -363,5 +448,20 @@ def run_movie_xz(
     point: PointParams = PointParams(), trail: TrailParams = TrailParams(),
     io: IOParams = IOParams(), ver: str = "c2.0",
 ) -> Dict[str, str | int]:
+    """XZ 平面の動画生成を簡易実行します。
+
+    Args:
+        df (pd.DataFrame): 入力データです。
+        boundary (Optional[Dict[str, float]]): 描画境界です。
+        theme (Theme): 描画テーマです。
+        movie (MovieParams): 動画設定です。
+        point (PointParams): 点描画設定です。
+        trail (TrailParams): 軌跡描画設定です。
+        io (IOParams): 出力設定です。
+        ver (str): バージョン文字列です。
+
+    Returns:
+        Dict[str, str | int]: 結果情報です。
+    """
     gen = MovieGenerator(boundary=boundary, theme=theme, movie=movie, point=point, trail=trail, io=io, ver=ver)
     return gen.run(df)
