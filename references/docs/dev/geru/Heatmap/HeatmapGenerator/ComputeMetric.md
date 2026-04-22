@@ -1,0 +1,1 @@
+::: yaiba_bi.core.heatmap.HeatmapGenerator.compute_metric
