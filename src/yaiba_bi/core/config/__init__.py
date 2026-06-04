@@ -8,12 +8,26 @@ YAIBA-BIで用いる定数や初期設定値等を扱うモジュール
 - schemas.py: YAIBA入力Schema, 中間Schema, 必須列セット
 - layouts.py: 出力画像等のレイアウト関係
 
+Attributes:
+    VERSION (Final[str]):  バージョン情報
+    TIMEZONE_UTC (Final[ZoneInfo]): 標準タイムゾーン(UTC)
+    TIMEZONE_JST (Final[ZoneInfo]): ローカルタイムゾーン(JST)
+    FONT (Final[str]): 標準フォントファイルパス
 """
 
 
 from .columns import *
-from .errors import *
-from .paths import *
+# from .errors import *
+# from .paths import *
+
+# from .defaults import *
+# from .schemas import *
+# from .layouts import *
+
+
+# init定数用import
+from typing import Final
+from zoneinfo import ZoneInfo
 
 
 #########################
@@ -21,9 +35,7 @@ from .paths import *
 #########################
 
 
-from zoneinfo import ZoneInfo
-
-
-VERSION = "0.1.0"  # 仮値
-TIMEZONE = ZoneInfo("Asia/Tokyo")
-FONT = "NotoSansCJK-Regular.ttc"  # 暫定
+VERSION:      Final[str]      = "0.1.0"  # 仮値
+TIMEZONE_UTC: Final[ZoneInfo] = ZoneInfo("UTC")
+TIMEZONE_JST: Final[ZoneInfo] = ZoneInfo("Asia/Tokyo")
+FONT:         Final[str]      = "NotoSansCJK-Regular.ttc"  # 暫定
