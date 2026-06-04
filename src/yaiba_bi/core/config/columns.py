@@ -1,6 +1,6 @@
 """　カラム名定義モジュール
 
-YAIBAの出力をPandasで解釈する際に利用するDataFrame等の列名を取り扱う
+YAIBAの出力をPandasで解釈する際に利用するDataFrame等の列名を定義する
 
 ## 列名定数
 
@@ -44,6 +44,7 @@ Attributes:
 
 Attributes:
     ATTENDANCE_REQUIRED_COLUMNS (Final[List[str]]): 入退室データフレーム必須カラムリスト
+
 """
 
 
