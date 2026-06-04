@@ -17,8 +17,8 @@ Attributes:
 
 
 from .columns import *
-# from .errors import *
-# from .paths import *
+from .errors import *
+from .paths import *
 
 # from .defaults import *
 # from .schemas import *
