@@ -1,0 +1,1 @@
+::: yaiba_bi.core.config.paths
