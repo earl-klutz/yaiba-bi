@@ -1,0 +1,54 @@
+"""YAIBA-BIのデータ処理・検証・出力処理に関する標準値。"""
+
+from typing import Final
+
+
+# 共通I/O
+DEFAULT_CSV_ENCODING: Final[str] = "utf-8"
+DEFAULT_OVERWRITE: Final[bool] = False
+
+
+# YAIBAログ読み込み
+DEFAULT_LOAD_SEC_INTERVAL: Final[int] = 1
+DEFAULT_LOAD_ANONYMIZE: Final[bool] = True
+
+
+# 動画生成
+DEFAULT_MOVIE_DURATION_REAL_SECONDS: Final[int] = 10800
+DEFAULT_MOVIE_DURATION_SECONDS: Final[int | None] = None
+DEFAULT_MOVIE_AUTO_MIN_SECONDS: Final[int] = 10
+DEFAULT_MOVIE_AUTO_MAX_SECONDS: Final[int] = 120
+DEFAULT_MOVIE_FPS: Final[int] = 30
+DEFAULT_MOVIE_BITRATE_KBPS: Final[int] = 2000
+DEFAULT_MOVIE_MIN_UNIQUE_SECONDS: Final[int] = 180
+
+DEFAULT_MOVIE_CODEC: Final[str] = "libx264"
+DEFAULT_MOVIE_PIXEL_FORMAT: Final[str] = "yuv420p"
+DEFAULT_MOVIE_MOVFLAGS: Final[str] = "+faststart"
+
+
+# ヒストグラム集計
+DEFAULT_HISTOGRAM_BINS: Final[int | str | None] = None
+
+
+# ヒートマップ処理
+DEFAULT_HEATMAP_RESOLUTION: Final[int] = 64
+MIN_HEATMAP_RESOLUTION: Final[int] = 5
+MAX_HEATMAP_RESOLUTION: Final[int] = 100
+
+DEFAULT_HEATMAP_GAUSSIAN_SIGMA_RATIO: Final[float] = 0.05
+DEFAULT_HEATMAP_PERCENTILE_CLIP: Final[tuple[int, int]] = (1, 99)
+DEFAULT_HEATMAP_MIN_UNIQUE_SECONDS: Final[int] = 10
+DEFAULT_HEATMAP_MIN_CLIP_SAMPLES: Final[int] = 30
+DEFAULT_HEATMAP_NORMALIZE_METHOD: Final[str] = "minmax"
+DEFAULT_HEATMAP_METRIC: Final[str] = "density"
+
+
+# イベントログ・軌跡処理
+DEFAULT_TRAJECTORY_BREAK_GAP_FACTOR: Final[float] = 3.0
+DEFAULT_TRAJECTORY_CLIP_OUT_OF_BOUNDS: Final[bool] = True
+DEFAULT_TRAJECTORY_FIT_MODE: Final[str] = "fit"
+
+
+# 統計処理
+DEFAULT_PERCENTILE_P95: Final[float] = 95.0
