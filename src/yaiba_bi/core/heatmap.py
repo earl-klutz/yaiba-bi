@@ -10,7 +10,6 @@ Attributes:
 import os
 import logging
 from dataclasses import dataclass
-from datetime import timedelta, timezone
 from typing import Optional, Tuple
 
 import numpy as np
@@ -22,9 +21,11 @@ import matplotlib.font_manager as fm
 from scipy.ndimage import gaussian_filter
 
 from .yaiba_loader import Area
+from . import config
 
 
-JST = timezone(timedelta(hours=9))
+# JST = timezone(timedelta(hours=9))
+JST = config.TIMEZONE_JST
 
 fonts = fm.findSystemFonts()
 font_list = [font for font in fonts if "NotoSansCJK-Regular.ttc" in font]
@@ -48,9 +49,12 @@ class Theme:
         dpi (int): 出力する画像の細かさ(dot per inch)
     """
 
-    cmap: str = "viridis"
-    image_size_px: Tuple[int, int] = (1280, 720)
-    dpi: int = 144
+    cmap: str = config.layouts.HEATMAP_CMAP
+    image_size_px: Tuple[int, int] = (
+        config.layouts.DEFAULT_IMAGE_WIDTH_PX,
+        config.layouts.DEFAULT_IMAGE_HEIGHT_PX
+    )
+    dpi: int = config.layouts.DEFAULT_IMAGE_DPI
 
     @property
     def size(self) -> Tuple[float, float]:
@@ -72,15 +76,15 @@ class HeatmapGenerator:
         normalize_method (str): d
     """
 
-    gaussian_sigma_ratio: float = 0.05
-    percentile_clip: Tuple[int, int] = (1, 99)
-    min_unique_seconds: int = 10
-    normalize_method: str = "minmax"
+    gaussian_sigma_ratio: float = config.defaults.DEFAULT_HEATMAP_GAUSSIAN_SIGMA_RATIO
+    percentile_clip: Tuple[int, int] = config.defaults.DEFAULT_HEATMAP_PERCENTILE_CLIP
+    min_unique_seconds: int = config.defaults.DEFAULT_HEATMAP_MIN_UNIQUE_SECONDS
+    normalize_method: str = config.defaults.DEFAULT_HEATMAP_NORMALIZE_METHOD
 
     def __init__(
         self,
         boundary: Area,
-        resolution: int = 64,
+        resolution: int = config.defaults.DEFAULT_HEATMAP_RESOLUTION,
         overwrite: bool = False,
         theme: Optional[Theme] = None
     ) -> None:
@@ -96,8 +100,11 @@ class HeatmapGenerator:
         self.boundary = boundary
 
         # resolution: grid_resolution 5-100、範囲外は自動補正
-        if resolution < 5 or resolution > 100:
-            resolution = 64
+        if (
+            resolution < config.defaults.MIN_HEATMAP_RESOLUTION or
+            resolution > config.defaults.MAX_HEATMAP_RESOLUTION
+        ):
+            resolution = config.defaults.DEFAULT_HEATMAP_RESOLUTION
             self._resolution_adjusted = True
         else:
             self._resolution_adjusted = False
@@ -115,8 +122,8 @@ class HeatmapGenerator:
     def clip_outliers(
         self,
         df: pd.DataFrame,
-        lower_percentile: int = 1,
-        upper_percentile: int = 99
+        lower_percentile: int = config.defaults.DEFAULT_HEATMAP_PERCENTILE_CLIP[0],
+        upper_percentile: int = config.defaults.DEFAULT_HEATMAP_PERCENTILE_CLIP[1]
     ) -> pd.DataFrame:
         """データを上下限の閾値で足切りする関数
 
@@ -134,26 +141,32 @@ class HeatmapGenerator:
             self.logger.warning("[-2301] percentile_clip が不正のためスキップ")
             return df
 
-        if len(df) < max(30, self.min_unique_seconds):
+        if len(df) < max(config.defaults.DEFAULT_HEATMAP_MIN_CLIP_SAMPLES, self.min_unique_seconds):
             self.logger.warning("[-2403] サンプル数不足のためアウトライヤクリップをスキップ")
             return df
 
-        dfv = df[["location_x", "location_z"]].apply(pd.to_numeric, errors="coerce").dropna()
-        if len(dfv) < max(30, self.min_unique_seconds):
+        dfv = df[
+            [
+                config.columns.COL_LOCATION_X,
+                config.columns.COL_LOCATION_Z
+            ]
+        ].apply(pd.to_numeric, errors="coerce").dropna()
+
+        if len(dfv) < max(config.defaults.DEFAULT_HEATMAP_MIN_CLIP_SAMPLES, self.min_unique_seconds):
             self.logger.warning("[-2403] 有効サンプル不足のためアウトライヤクリップをスキップ")
             return df
 
         pl, ph = lower_percentile / 100.0, upper_percentile / 100.0
-        x_low, x_high = dfv["location_x"].quantile([pl, ph]).values
-        z_low, z_high = dfv["location_z"].quantile([pl, ph]).values
+        x_low, x_high = dfv[config.columns.COL_LOCATION_X].quantile([pl, ph]).values
+        z_low, z_high = dfv[config.columns.COL_LOCATION_Z].quantile([pl, ph]).values
 
         if not (np.isfinite([x_low, x_high, z_low, z_high]).all() and x_low < x_high and z_low < z_high):
             self.logger.warning("[-2403] パーセンタイル範囲が成立しないためスキップ")
             return df
 
         mask = (
-            df["location_x"].between(x_low, x_high, inclusive="both") &
-            df["location_z"].between(z_low, z_high, inclusive="both")
+            df[config.columns.COL_LOCATION_X].between(x_low, x_high, inclusive="both") &
+            df[config.columns.COL_LOCATION_Z].between(z_low, z_high, inclusive="both")
         )
 
         return df.loc[mask].copy()
@@ -178,8 +191,8 @@ class HeatmapGenerator:
         x_edges = np.linspace(bounds.x_min, bounds.x_max, resolution + 1)
         z_edges = np.linspace(bounds.z_min, bounds.z_max, resolution + 1)
         h, xe, ze = np.histogram2d(
-            df["location_z"].to_numpy(),  # y軸相当
-            df["location_x"].to_numpy(),  # x軸相当
+            df[config.columns.COL_LOCATION_Z].to_numpy(),  # y軸相当
+            df[config.columns.COL_LOCATION_X].to_numpy(),  # x軸相当
             bins=[z_edges, x_edges]
         )
         # 返却は [Z, X] 形状（imshow の行=Z, 列=X に合わせる）
@@ -209,7 +222,7 @@ class HeatmapGenerator:
     @staticmethod
     def normalize_data(
         grid_data: np.ndarray,
-        method: str = "minmax"
+        method: str = config.defaults.DEFAULT_HEATMAP_NORMALIZE_METHOD
     ) -> np.ndarray:
         """ヒートマップ配列を正規化処理する
 
@@ -221,7 +234,7 @@ class HeatmapGenerator:
             np.ndarray: method == "minmax"の時は正規化後のヒートマップ配列, それ以外は何もしない
         """
 
-        if method != "minmax":
+        if method != config.defaults.DEFAULT_HEATMAP_NORMALIZE_METHOD:
             return grid_data
         g_min = np.nanmin(grid_data)
         g_max = np.nanmax(grid_data)
@@ -232,7 +245,7 @@ class HeatmapGenerator:
     @staticmethod
     def compute_metric(
         grid_counts: np.ndarray,
-        metric: str = "density"
+        metric: str = config.defaults.DEFAULT_HEATMAP_METRIC
     ) -> np.ndarray:
         """現状特に何もしていない...
 
@@ -245,8 +258,8 @@ class HeatmapGenerator:
         # density: 正規化は後段で行うためそのまま返す（スムージング前の値）
         return grid_counts
 
-    @staticmethod
     def generate_heatmap(
+        self,
         grid_data: np.ndarray,
         bounds: Area,
         theme: Theme,
@@ -265,14 +278,14 @@ class HeatmapGenerator:
         """
 
         fig, ax = plt.subplots(figsize=theme.size, dpi=theme.dpi)
-        ax.set_aspect("equal")
+        ax.set_aspect(config.layouts.HEATMAP_ASPECT)
 
         # カラーバーの v_min/v_max はスムージング後配列の 1–99% で決定
         flat = grid_data.ravel()
         if np.all(flat == 0):
             v_min, v_max = 0.0, 1.0
         else:
-            v_min, v_max = np.percentile(flat, [1, 99])
+            v_min, v_max = np.percentile(flat, self.percentile_clip)
             if v_max <= v_min:
                 v_min, v_max = float(np.min(flat)), float(np.max(flat))
                 if v_max == v_min:
@@ -285,17 +298,21 @@ class HeatmapGenerator:
             extent=(bounds.x_min, bounds.x_max, bounds.z_min, bounds.z_max),
             vmin=v_min,
             vmax=v_max,
-            interpolation="nearest",
-            aspect="equal",
+            interpolation=config.layouts.HEATMAP_INTERPOLATION,
+            aspect=config.layouts.HEATMAP_ASPECT
         )
 
         # 軸ラベル・タイトル
-        ax.set_xlabel("X座標")
-        ax.set_ylabel("Z座標")
-        ax.set_title("イベントの混雑エリア")
+        ax.set_xlabel(config.layouts.HEATMAP_X_LABEL)
+        ax.set_ylabel(config.layouts.HEATMAP_Z_LABEL)
+        ax.set_title(config.layouts.HEATMAP_TITLE)
 
         cbar = fig.colorbar(im, ax=ax)
-        cbar.set_label("密度(0-1)" if metric == "density" else "観測数(人・秒相当)")
+        cbar.set_label(
+            "密度(0-1)"
+            if metric == config.defaults.DEFAULT_HEATMAP_METRIC
+            else "観測数(人・秒相当)"
+        )
 
         fig.tight_layout()
         return fig
@@ -323,7 +340,7 @@ class HeatmapGenerator:
         df: pd.DataFrame,
         output_basename: str,
         save_dir: str = "",
-        metric: str = "density"
+        metric: str = config.defaults.DEFAULT_HEATMAP_METRIC
     ) -> None:
         """ヒートマップを作成する機能を一括で提供するAPI
 
@@ -353,7 +370,7 @@ class HeatmapGenerator:
             ms = self.apply_gaussian_smoothing(m, sigma_bins=sigma_bins)
 
             # 正規化（density のとき）
-            if metric == "density":
+            if metric == config.defaults.DEFAULT_HEATMAP_METRIC:
                 mn = self.normalize_data(ms, method=self.normalize_method)
             else:
                 mn = ms
@@ -362,14 +379,16 @@ class HeatmapGenerator:
             fig = self.generate_heatmap(mn, self.boundary, self.theme, metric)
 
             # パス命名・保存
-            pd_time = df["second"].min().to_pydatetime()
+            pd_time = df[config.columns.COL_SECOND].min().to_pydatetime()
             now = pd_time.strftime("%Y%m%d_%H%M%S")
             ver = "v1.0"
             basename = f"heatmap_2D-{output_basename}-{now}_{ver}.png"
             self.save_png(fig, os.path.join(save_dir, basename))
 
             if self._resolution_adjusted:
-                self.logger.warning("[-2301] パラメータ範囲外: grid_resolution を 64 に自動補正")
+                self.logger.warning(
+                    f"[-2301] パラメータ範囲外: grid_resolution を {config.defaults.DEFAULT_HEATMAP_RESOLUTION} に自動補正"
+                )
         except Exception as e:
             self.logger.error(f"[ERROR] 実行失敗: {e}")
             raise
@@ -390,8 +409,10 @@ def clip_by_boundary(
     """
 
     mask = (
-            (df["location_x"] >= boundary.x_min) & (df["location_x"] <= boundary.x_max) &
-            (df["location_z"] >= boundary.z_min) & (df["location_z"] <= boundary.z_max)
+            (df[config.columns.COL_LOCATION_X] >= boundary.x_min) &
+            (df[config.columns.COL_LOCATION_X] <= boundary.x_max) &
+            (df[config.columns.COL_LOCATION_Z] >= boundary.z_min) &
+            (df[config.columns.COL_LOCATION_Z] <= boundary.z_max)
     )
     return df.loc[mask].copy()
 
