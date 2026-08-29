@@ -12,14 +12,6 @@ from typing import Iterator
 from yaiba_bi.core import config
 
 
-# TODO: 参照切替で定数廃止(PR前にコメントごと削除)
-# ディレクトリ定数
-# BASE = "YAIBA_data"
-# INPUT = f"{BASE}/input"
-# INTERMEDIATE = f"{BASE}/intermediate"
-# OUTPUT = f"{BASE}/output"
-
-
 # 定数イテレータ
 def __iters() -> Iterator[str]:
     """ディレクトリ定数を順番に取り出すイテレータを提供

@@ -24,16 +24,17 @@ from .yaiba_loader import Area
 from . import config
 
 
-# JST = timezone(timedelta(hours=9))
 JST = config.TIMEZONE_JST
 
 fonts = fm.findSystemFonts()
-font_list = [font for font in fonts if "NotoSansCJK-Regular.ttc" in font]
+# font_list = [font for font in fonts if "NotoSansCJK-Regular.ttc" in font]
+font_list = [font for font in fonts if "Hiragino Sans" in font]  # PR前に↑と入れ替えの上、削除
 
 if font_list:
     fm.fontManager.addfont(font_list[0])
     font_property = fm.FontProperties(fname=font_list[0])
     plt.rcParams["font.family"] = font_property.get_name()
+    plt.rcParams["axes.unicode_minus"] = False  # PR前に削除
 else:
     pass
     # raise FileNotFoundError("NotoSansCJK-Regular.ttc not found")
@@ -380,7 +381,7 @@ class HeatmapGenerator:
 
             # パス命名・保存
             pd_time = df[config.columns.COL_SECOND].min().to_pydatetime()
-            now = pd_time.strftime("%Y%m%d_%H%M%S")
+            now = pd_time.strftime("%Y%m%d_%H%M%S")  # 現在時刻になってない(CSVの時刻を拾っている)
             ver = "v1.0"
             basename = f"heatmap_2D-{output_basename}-{now}_{ver}.png"
             self.save_png(fig, os.path.join(save_dir, basename))
