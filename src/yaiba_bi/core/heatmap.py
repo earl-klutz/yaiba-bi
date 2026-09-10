@@ -9,6 +9,7 @@ Attributes:
 
 import os
 import logging
+from datetime import datetime
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
@@ -24,7 +25,6 @@ from .yaiba_loader import Area
 from . import config
 
 
-JST = config.TIMEZONE_JST
 
 fonts = fm.findSystemFonts()
 # font_list = [font for font in fonts if "NotoSansCJK-Regular.ttc" in font]
@@ -139,11 +139,11 @@ class HeatmapGenerator:
 
         # データ点が少ない・指定不正は安全スキップ
         if not (0 <= lower_percentile < upper_percentile <= 100):
-            self.logger.warning("[-2301] percentile_clip が不正のためスキップ")
+            self.logger.warning(f"[{config.errors.EC_STATS_INPUT}] percentile_clip が不正のためスキップ")
             return df
 
         if len(df) < max(config.defaults.DEFAULT_HEATMAP_MIN_CLIP_SAMPLES, self.min_unique_seconds):
-            self.logger.warning("[-2403] サンプル数不足のためアウトライヤクリップをスキップ")
+            self.logger.warning(f"[{config.errors.EC_SAMPLE_SHORT}] サンプル数不足のためアウトライヤクリップをスキップ")
             return df
 
         dfv = df[
@@ -154,7 +154,7 @@ class HeatmapGenerator:
         ].apply(pd.to_numeric, errors="coerce").dropna()
 
         if len(dfv) < max(config.defaults.DEFAULT_HEATMAP_MIN_CLIP_SAMPLES, self.min_unique_seconds):
-            self.logger.warning("[-2403] 有効サンプル不足のためアウトライヤクリップをスキップ")
+            self.logger.warning(f"[{config.errors.EC_SAMPLE_SHORT}] 有効サンプル不足のためアウトライヤクリップをスキップ")
             return df
 
         pl, ph = lower_percentile / 100.0, upper_percentile / 100.0
@@ -162,7 +162,7 @@ class HeatmapGenerator:
         z_low, z_high = dfv[config.columns.COL_LOCATION_Z].quantile([pl, ph]).values
 
         if not (np.isfinite([x_low, x_high, z_low, z_high]).all() and x_low < x_high and z_low < z_high):
-            self.logger.warning("[-2403] パーセンタイル範囲が成立しないためスキップ")
+            self.logger.warning(f"[{config.errors.EC_SAMPLE_SHORT}] パーセンタイル範囲が成立しないためスキップ")
             return df
 
         mask = (
@@ -331,7 +331,7 @@ class HeatmapGenerator:
         """
 
         if os.path.exists(path) and not self.overwrite:
-            raise FileExistsError(f"[-2701] 既存ファイルあり（overwrite=False）: {path}")
+            raise FileExistsError(f"[{config.errors.EC_STORAGE_DST_INVALID}] 既存ファイルあり（overwrite=False）: {path}")
         fig.savefig(path, bbox_inches="tight")
         plt.close(fig)
 
@@ -380,15 +380,14 @@ class HeatmapGenerator:
             fig = self.generate_heatmap(mn, self.boundary, self.theme, metric)
 
             # パス命名・保存
-            pd_time = df[config.columns.COL_SECOND].min().to_pydatetime()
-            now = pd_time.strftime("%Y%m%d_%H%M%S")  # 現在時刻になってない(CSVの時刻を拾っている)
-            ver = "v1.0"
+            now = datetime.now(config.TIMEZONE_JST).strftime("%Y%m%d-%H%M%S")
+            ver = config.VERSION
             basename = f"heatmap_2D-{output_basename}-{now}_{ver}.png"
             self.save_png(fig, os.path.join(save_dir, basename))
 
             if self._resolution_adjusted:
                 self.logger.warning(
-                    f"[-2301] パラメータ範囲外: grid_resolution を {config.defaults.DEFAULT_HEATMAP_RESOLUTION} に自動補正"
+                    f"[{config.errors.EC_STATS_INPUT}] パラメータ範囲外: grid_resolution を {config.defaults.DEFAULT_HEATMAP_RESOLUTION} に自動補正"
                 )
         except Exception as e:
             self.logger.error(f"[ERROR] 実行失敗: {e}")
