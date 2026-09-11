@@ -1,10 +1,12 @@
 from dataclasses import dataclass
 from typing import Optional, Tuple
 import json
-from datetime import datetime,date
+from datetime import datetime
 import numpy as np
 import pandas as pd
 import yaiba
+
+from yaiba_bi.core import config
 
 
 # ================================
@@ -91,58 +93,14 @@ class LogData:
 # Helpers
 # ================================
 
-schema_yaiba = {
-    "position": {
-        "keys": [
-            "timestamp", "player_id", "pseudo_user_name",
-            "location_x", "location_y", "location_z",
-            "rotation_1", "rotation_2", "rotation_3",
-            "velocity_x", "velocity_y", "velocity_z",
-            "is_vr", "type_id",
-        ],
-        "types": [
-            float, int, str,
-            float, float, float,
-            float, float, float,
-            float, float, float,
-            bool, str
-        ],
-    },
-    "attendance": {
-        "keys": ["timestamp", "pseudo_user_name", "type_id"],
-        "types": [float, str, str],
-    },
-}
-
-schema_intermediate = {
-    "position": {
-        "keys": [
-            "second", "user_id", "user_name",
-            "location_x", "location_y", "location_z",
-            "rotation_1", "rotation_2", "rotation_3",
-            "velocity_x", "velocity_y", "velocity_z",
-            "is_vr", "event_day", "is_error"
-        ],
-        "types": [
-            datetime, int, str,
-            float, float, float,
-            float, float, float,
-            float, float, float,
-            bool, date, bool
-        ]
-    },
-    "attendance": {
-        "keys": [
-            "second", "action", "user_name",
-            "is_error"
-        ],
-        "types": [
-            datetime, str, int,
-            bool
-        ]
-    }
-}
-
+# YAIBAログ由来の識別子。config/ 側に対応する定数がまだ無いため暫定でここに置く。
+LOG_ENTRIES_KEY = "log_entries"
+TYPE_ID_PLAYER_POSITION = "yaiba/player_position"
+TYPE_ID_PLAYER_JOIN = "vrc/player_join"
+TYPE_ID_PLAYER_LEFT = "vrc/player_left"
+ACTION_JOIN = "join"
+ACTION_LEFT = "left"
+ACTION_UNKNOWN = "unknown"
 
 
 def load_session_log(log_file: str) -> yaiba.SessionLog:
@@ -191,10 +149,10 @@ def get_time_span(df_pos: pd.DataFrame) -> int | None:
     all_diffs = []
 
     # player_idごとに処理
-    for pid,group in df_pos.groupby("player_id"):
+    for pid,group in df_pos.groupby(config.columns.COL_PLAYER_ID):
         # timestampで並べ替え
-        group = group.sort_values("timestamp")
-        timestamps = group["timestamp"].tolist()
+        group = group.sort_values(config.columns.COL_TIMESTAMP)
+        timestamps = group[config.columns.COL_TIMESTAMP].tolist()
         samples = len(timestamps)//10
 
         # 隣同士の差を計算
@@ -222,12 +180,12 @@ def _normalize_action(v: str) -> str:
     Returns:
         str: 正規化後のアクション文字列。"join" / "left" / "unknown" のいずれか。
     """
-    if v == "vrc/player_join":
-        return "join"
-    elif v == "vrc/player_left":
-        return "left"
+    if v == TYPE_ID_PLAYER_JOIN:
+        return ACTION_JOIN
+    elif v == TYPE_ID_PLAYER_LEFT:
+        return ACTION_LEFT
     else:
-        return "unknown"
+        return ACTION_UNKNOWN
 
 def _isinstance_map(vals, types) -> bool:
     """値が指定した型のインスタンスかを判定する。
@@ -272,24 +230,24 @@ def yaiba2df(session_log, schema: dict) -> Tuple[pd.DataFrame, pd.DataFrame]:
         raise ValueError(f"YAIBA ログのパースに失敗しました: {e}")
 
     # log_entries がなければ即停止
-    if "log_entries" not in data:
+    if LOG_ENTRIES_KEY not in data:
         raise ValueError("YAIBA ログに log_entries が含まれていません。")
 
-    entry = data["log_entries"]
+    entry = data[LOG_ENTRIES_KEY]
 
     pos_records = []
     attendance_records = []
 
 
-    pos_keys = schema["position"]["keys"]
-    pos_types = schema["position"]["types"]
-    attendance_keys = schema["attendance"]["keys"]
-    attendance_types = schema["attendance"]["types"]
+    pos_keys = schema[config.columns.SCHEMA_KEY_POSITION][config.columns.SCHEMA_KEY_KEYS]
+    pos_types = schema[config.columns.SCHEMA_KEY_POSITION][config.columns.SCHEMA_KEY_TYPES]
+    attendance_keys = schema[config.columns.SCHEMA_KEY_ATTENDANCE][config.columns.SCHEMA_KEY_KEYS]
+    attendance_types = schema[config.columns.SCHEMA_KEY_ATTENDANCE][config.columns.SCHEMA_KEY_TYPES]
 
     for record in entry:
-        
-        type_id = record["type_id"]
-        if type_id == "yaiba/player_position":
+
+        type_id = record[config.columns.COL_TYPE_ID]
+        if type_id == TYPE_ID_PLAYER_POSITION:
             L = []
             for key in pos_keys:
                 L.append(record[key])
@@ -297,9 +255,9 @@ def yaiba2df(session_log, schema: dict) -> Tuple[pd.DataFrame, pd.DataFrame]:
             is_error = False in ret
             L.append(is_error)
             pos_records.append(L)
-            
 
-        elif type_id in ["vrc/player_join", "vrc/player_left"]:
+
+        elif type_id in [TYPE_ID_PLAYER_JOIN, TYPE_ID_PLAYER_LEFT]:
             L = []
             for key in attendance_keys:
                 L.append(record[key])
@@ -308,8 +266,8 @@ def yaiba2df(session_log, schema: dict) -> Tuple[pd.DataFrame, pd.DataFrame]:
             L.append(is_error)
             attendance_records.append(L)
 
-    df_pos = pd.DataFrame(pos_records,columns = pos_keys+["is_error"])
-    df_event = pd.DataFrame(attendance_records,columns = attendance_keys+["is_error"])
+    df_pos = pd.DataFrame(pos_records,columns = pos_keys+[config.columns.COL_IS_ERROR])
+    df_event = pd.DataFrame(attendance_records,columns = attendance_keys+[config.columns.COL_IS_ERROR])
 
     return df_pos, df_event
 
@@ -331,40 +289,32 @@ def GenerateIntermediate(df_pos: pd.DataFrame, df_event: pd.DataFrame, schema: d
 
     # --- position 側 ---
 
-    rename_map = {
-        "player_id": "user_id",
-        "pseudo_user_name": "user_name",
-        }
-
-    if not df_pos.empty and "timestamp" in df_pos.columns:
-        df_pos["second"] = pd.to_datetime(df_pos["timestamp"], unit="s")
-        df_pos["second"] = df_pos["second"].dt.tz_localize("UTC")
-        df_pos["event_day"] = df_pos["second"].dt.tz_convert("Asia/Tokyo").dt.date
-        df_pos["second"] = df_pos["second"].dt.tz_localize(None)
-        df_pos = df_pos.rename(columns=rename_map)
+    if not df_pos.empty and config.columns.COL_TIMESTAMP in df_pos.columns:
+        df_pos[config.columns.COL_SECOND] = pd.to_datetime(df_pos[config.columns.COL_TIMESTAMP], unit="s")
+        df_pos[config.columns.COL_SECOND] = df_pos[config.columns.COL_SECOND].dt.tz_localize(config.TIMEZONE_UTC)
+        df_pos[config.columns.COL_EVENT_DAY] = df_pos[config.columns.COL_SECOND].dt.tz_convert(config.TIMEZONE_JST).dt.date
+        df_pos[config.columns.COL_SECOND] = df_pos[config.columns.COL_SECOND].dt.tz_localize(None)
+        df_pos = df_pos.rename(columns=config.columns.RENAME_POSITION)
 
     # --- attendance 側 ---
-    rename_map = {
-        "pseudo_user_name": "user_name",
-        }
-    if not df_event.empty and "timestamp" in df_event.columns:
-        df_event["second"] = pd.to_datetime(df_event["timestamp"], unit="s")
-        df_event["second"] = df_event["second"].dt.tz_localize("UTC")
-        df_event["second"] = df_event["second"].dt.tz_localize(None)
-        df_event["action"] = df_event["type_id"].map(_normalize_action)
-        df_event = df_event.drop(columns=["type_id"])
-        df_event = df_event.rename(columns=rename_map)
+    if not df_event.empty and config.columns.COL_TIMESTAMP in df_event.columns:
+        df_event[config.columns.COL_SECOND] = pd.to_datetime(df_event[config.columns.COL_TIMESTAMP], unit="s")
+        df_event[config.columns.COL_SECOND] = df_event[config.columns.COL_SECOND].dt.tz_localize(config.TIMEZONE_UTC)
+        df_event[config.columns.COL_SECOND] = df_event[config.columns.COL_SECOND].dt.tz_localize(None)
+        df_event[config.columns.COL_ACTION] = df_event[config.columns.COL_TYPE_ID].map(_normalize_action)
+        df_event = df_event.drop(columns=[config.columns.COL_TYPE_ID])
+        df_event = df_event.rename(columns=config.columns.RENAME_ATTENDANCE)
 
-    
+
 
     # --- schema 順でカラム整列（pandas 1行方式） ---
     if not df_pos.empty:
-        desired = schema["position"]["keys"]
+        desired = schema[config.columns.SCHEMA_KEY_POSITION][config.columns.SCHEMA_KEY_KEYS]
         cols = [c for c in desired if c in df_pos.columns]
         df_pos = df_pos[cols]
 
     if not df_event.empty:
-        desired = schema["attendance"]["keys"]
+        desired = schema[config.columns.SCHEMA_KEY_ATTENDANCE][config.columns.SCHEMA_KEY_KEYS]
         cols = [c for c in desired if c in df_event.columns]
         df_event = df_event[cols]
 
@@ -385,9 +335,9 @@ def build_area(position: pd.DataFrame) -> Area:
     """
     if position is None or position.empty:
         return Area(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
-    x_min, x_max = np.nanmin(position["location_x"]), np.nanmax(position["location_x"])
-    y_min, y_max = np.nanmin(position["location_y"]), np.nanmax(position["location_y"])
-    z_min, z_max = np.nanmin(position["location_z"]), np.nanmax(position["location_z"])
+    x_min, x_max = np.nanmin(position[config.columns.COL_LOCATION_X]), np.nanmax(position[config.columns.COL_LOCATION_X])
+    y_min, y_max = np.nanmin(position[config.columns.COL_LOCATION_Y]), np.nanmax(position[config.columns.COL_LOCATION_Y])
+    z_min, z_max = np.nanmin(position[config.columns.COL_LOCATION_Z]), np.nanmax(position[config.columns.COL_LOCATION_Z])
     return Area(float(x_min), float(x_max),
                 float(y_min), float(y_max),
                 float(z_min), float(z_max))
@@ -398,8 +348,8 @@ def build_area(position: pd.DataFrame) -> Area:
 # データ取り込み・前処理(IO標準化)工程メイン関数
 # ================================
 def load(log_file: str,
-        sec_interval: int = 1,
-        anonymize: bool = True,
+        sec_interval: int = config.defaults.DEFAULT_LOAD_SEC_INTERVAL,
+        anonymize: bool = config.defaults.DEFAULT_LOAD_ANONYMIZE,
         base_time: Optional[datetime] = None) -> LogData:
     """ログファイルを読み込みLogDataとして返すメイン関数。
 
@@ -420,11 +370,11 @@ def load(log_file: str,
     session_log = load_session_log(log_file)
 
     # 2表を構築
-    df_pos, df_event = yaiba2df(session_log,schema_yaiba)
+    df_pos, df_event = yaiba2df(session_log,config.schemas.LAYOUT_YAIBA)
 
     # 秒粒度の推定
     time_span = get_time_span(df_pos)
-    df_pos, df_event = GenerateIntermediate(df_pos, df_event,schema_intermediate)
+    df_pos, df_event = GenerateIntermediate(df_pos, df_event,config.schemas.LAYOUT_INTERMEDIATE)
 
     # Areaを算出し、LogDataに格納
     area = build_area(df_pos if not df_pos.empty else None)
