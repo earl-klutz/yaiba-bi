@@ -100,7 +100,7 @@ LAYOUT_INTERMEDIATE: dict = {
             COL_SECOND, COL_ACTION, COL_USER_NAME, COL_IS_ERROR,
         ],
         SCHEMA_KEY_TYPES: [
-            datetime, str, int,
+            datetime, str, str,
             bool,
         ],
     },
