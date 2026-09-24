@@ -16,6 +16,35 @@ import matplotlib.dates as mdates
 import pytz
 from pandas.tseries.offsets import DateOffset
 
+from .config import TIMEZONE_JST, TIMEZONE_UTC
+from .config.columns import (
+    COL_ACTION,
+    COL_LOCATION_X,
+    COL_LOCATION_Z,
+    COL_SECOND,
+    COL_USER_ID,
+)
+from .config.defaults import (
+    DEFAULT_PERCENTILE_P95,
+    DEFAULT_TRAJECTORY_BREAK_GAP_FACTOR,
+    DEFAULT_TRAJECTORY_CLIP_OUT_OF_BOUNDS,
+    DEFAULT_TRAJECTORY_FIT_MODE,
+)
+from .config.layouts import (
+    CHART_GRID_ALPHA,
+    CHART_GRID_LINE_STYLE,
+    CONCURRENCY_LINE_COLOR,
+    CONCURRENCY_LINE_WIDTH,
+    DEFAULT_IMAGE_DPI,
+    DEFAULT_IMAGE_HEIGHT_PX,
+    DEFAULT_IMAGE_WIDTH_PX,
+    TRAJECTORY_COLOR_SCHEME,
+    TRAJECTORY_END_MARKER_SIZE_PX,
+    TRAJECTORY_MARGIN_PX,
+    TRAJECTORY_START_MARKER_SIZE_PX,
+)
+from .config.paths import COLAB_OUTPUT, FILE_EXT_PNG
+
 __all__ = [
     "SpecError",
     "RenderConfig",
@@ -79,9 +108,9 @@ class RenderConfig:
 
     event_day: str
     filename: str
-    dpi: int = 144
-    width_px: int = 1280
-    height_px: int = 720
+    dpi: int = DEFAULT_IMAGE_DPI
+    width_px: int = DEFAULT_IMAGE_WIDTH_PX
+    height_px: int = DEFAULT_IMAGE_HEIGHT_PX
 
     @property
     def size_inches(self) -> Tuple[float, float]:
@@ -109,21 +138,21 @@ class TrajectoryConfig:
         clip_oob: 範囲外データの取り扱い。
     """
 
-    color_scheme: Literal["by_user", "by_speed", "by_time"] = "by_user"
-    break_gap_factor: float = 3.0
-    start_marker_size_px: int = 6
-    end_marker_size_px: int = 10
+    color_scheme: Literal["by_user", "by_speed", "by_time"] = TRAJECTORY_COLOR_SCHEME
+    break_gap_factor: float = DEFAULT_TRAJECTORY_BREAK_GAP_FACTOR
+    start_marker_size_px: int = TRAJECTORY_START_MARKER_SIZE_PX
+    end_marker_size_px: int = TRAJECTORY_END_MARKER_SIZE_PX
     filter_user_ids: Optional[List[str]] = None
     bounds: Optional[Dict[str, float]] = None
-    fit_mode: Literal["fit", "fill", "stretch"] = "fit"
-    margin_px: int = 0
-    clip_oob: bool = True
+    fit_mode: Literal["fit", "fill", "stretch"] = DEFAULT_TRAJECTORY_FIT_MODE
+    margin_px: int = TRAJECTORY_MARGIN_PX
+    clip_oob: bool = DEFAULT_TRAJECTORY_CLIP_OUT_OF_BOUNDS
 
 
 class _Naming:
     """成果物ファイルのパス組み立てユーティリティ。"""
 
-    RESULT_ROOT: Path = Path("./YAIBA_data/output")
+    RESULT_ROOT: Path = Path(COLAB_OUTPUT)
 
     def ensure_dirs(self) -> None:
         """必要なディレクトリを作成する。"""
@@ -142,7 +171,7 @@ class _Naming:
         """
 
         self.ensure_dirs()
-        return self.RESULT_ROOT / f"cc_line_{event_day}_{filename}.png"
+        return self.RESULT_ROOT / f"cc_line_{event_day}_{filename}{FILE_EXT_PNG}"
 
     def trajectory_png_path(self, event_day: str, filename: str) -> Path:
         """軌跡PNGの出力パス。
@@ -156,7 +185,7 @@ class _Naming:
         """
 
         self.ensure_dirs()
-        return self.RESULT_ROOT / f"traj_{event_day}_{filename}.png"
+        return self.RESULT_ROOT / f"traj_{event_day}_{filename}{FILE_EXT_PNG}"
 
     def stats_txt_path(self, event_day: str, filename: str) -> Path:
         """統計TXTの出力パス。
@@ -238,22 +267,25 @@ class EventLogVisualizer:
         Raises:
             SpecError: 必須列不足、または算出結果が空の場合。
         """
-        required = {"second", "action"}
+        required = {COL_SECOND, COL_ACTION}
         if not required.issubset(df_att.columns):
-            raise SpecError(-2101, "attendance に必須列 second/action が存在しません")
+            raise SpecError(-2101, f"attendance に必須列 {COL_SECOND}/{COL_ACTION} が存在しません")
         df_att = df_att.copy()
-        df_att["second"] = pd.to_datetime(df_att["second"], utc=True)
-        df_att = df_att.sort_values("second")
+        df_att[COL_SECOND] = pd.to_datetime(df_att[COL_SECOND], utc=True)
+        df_att = df_att.sort_values(COL_SECOND)
         action_map = {"join": 1, "left": -1}
-        df_att["delta"] = df_att["action"].map(action_map)
+        df_att["delta"] = df_att[COL_ACTION].map(action_map)
         df_att = df_att.dropna(subset=["delta"])
-        events = df_att.groupby("second")["delta"].sum().sort_index()
+        events = df_att.groupby(COL_SECOND)["delta"].sum().sort_index()
         if events.empty:
             raise SpecError(-2101, "attendance から同時接続数を構成できません")
         # timeline index: UTC
-        timeline = events.reindex(pd.date_range(events.index.min(), events.index.max(), freq="s", tz="UTC"), fill_value=0.0)
+        timeline = events.reindex(
+            pd.date_range(events.index.min(), events.index.max(), freq="s", tz=TIMEZONE_UTC),
+            fill_value=0.0,
+        )
         cc_series = timeline.cumsum().astype(float)
-        df_cc = pd.DataFrame({"second": timeline.index, "cc": cc_series})
+        df_cc = pd.DataFrame({COL_SECOND: timeline.index, "cc": cc_series})
         return df_cc
 
     def compute_cc_stats(self, df_cc: pd.DataFrame) -> dict:
@@ -275,7 +307,7 @@ class EventLogVisualizer:
             "max": int(np.max(values)),
             "mean": float(np.mean(values)),
             "median": float(np.median(values)),
-            "p95": self._percentile(values, 95.0),
+            "p95": self._percentile(values, DEFAULT_PERCENTILE_P95),
         }
 
     def render_concurrency_png(self, df_cc: pd.DataFrame) -> str:
@@ -295,12 +327,9 @@ class EventLogVisualizer:
         out_path = self._naming.cc_png_path(rcfg.event_day, rcfg.filename)
 
         fig, ax = plt.subplots(figsize=rcfg.size_inches, dpi=rcfg.dpi)
-        time_col = "t" if "t" in df_cc.columns else "second"
+        time_col = "t" if "t" in df_cc.columns else COL_SECOND
         if time_col not in df_cc.columns:
             raise SpecError(-2101, "cc データに時間列が存在しません")
-
-        # JSTタイムゾーン
-        JST = pytz.timezone("Asia/Tokyo")
 
         # x軸の時刻を mm-dd HH:mm で表示するように設定
         # 入力はUTCなのでJSTに変換
@@ -317,16 +346,19 @@ class EventLogVisualizer:
             x = pd.to_datetime(x, utc=True).dt.tz_convert(JST)
         """
 
-        # ax.plot(x, df_cc["cc"], linewidth=1.5, color="#1f77b4")
-        ax.plot(df_cc[time_col], df_cc["cc"], linewidth=1.5, color="#1f77b4")
+        ax.plot(
+            df_cc[time_col],
+            df_cc["cc"],
+            linewidth=CONCURRENCY_LINE_WIDTH,
+            color=CONCURRENCY_LINE_COLOR,
+        )
         ax.set_xlabel("時間 (JST)")
         ax.set_ylabel("同時接続数")
         ax.set_title("同時接続数の推移")
-        ax.grid(True, linestyle="--", alpha=0.3)
+        ax.grid(True, linestyle=CHART_GRID_LINE_STYLE, alpha=CHART_GRID_ALPHA)
 
         # x軸のフォーマットを mm-dd HH:mm (JST) に
         locator = mdates.AutoDateLocator()
-        # formatter = mdates.DateFormatter("%m-%d %H:%M", tz=JST)
         formatter = mdates.DateFormatter("%m-%d %H:%M")
         ax.xaxis.set_major_locator(locator)
         ax.xaxis.set_major_formatter(formatter)
@@ -367,7 +399,7 @@ class EventLogVisualizer:
 
         user_ids = self.trajectory_config.filter_user_ids
         if user_ids:
-            return df[df["user_id"].isin(user_ids)].copy()
+            return df[df[COL_USER_ID].isin(user_ids)].copy()
         return df.copy()
 
     @staticmethod
@@ -384,7 +416,7 @@ class EventLogVisualizer:
 
         if df.empty:
             return []
-        time_col = "t" if "t" in df.columns else "second"
+        time_col = "t" if "t" in df.columns else COL_SECOND
         if time_col not in df.columns:
             raise SpecError(-2101, "軌跡データに時間列が存在しません")
         df_sorted = df.sort_values(time_col)
@@ -417,7 +449,7 @@ class EventLogVisualizer:
             描画に使用する色コード。
         """
 
-        palette = plt.rcParams["axes.prop_cycle"].by_key().get("color", ["#1f77b4"])
+        palette = plt.rcParams["axes.prop_cycle"].by_key().get("color", [CONCURRENCY_LINE_COLOR])
         return palette[index % len(palette)]
 
     def render_trajectory2d_png(self, df_pos: pd.DataFrame, area: Dict[str, float]) -> str:
@@ -434,13 +466,13 @@ class EventLogVisualizer:
             SpecError: 検証エラーや領域不正時。
         """
 
-        required = {"second", "user_id", "location_x", "location_z"}
+        required = {COL_SECOND, COL_USER_ID, COL_LOCATION_X, COL_LOCATION_Z}
         if not required.issubset(df_pos.columns):
             missing = required - set(df_pos.columns)
             raise SpecError(-2101, f"df_pos に必須列 {sorted(missing)} が存在しません")
         df_pos = df_pos.copy()
         # 入力はUTCなのでJSTに変換
-        df_pos["second"] = pd.to_datetime(df_pos["second"], utc=True).dt.tz_convert("Asia/Tokyo")
+        df_pos[COL_SECOND] = pd.to_datetime(df_pos[COL_SECOND], utc=True).dt.tz_convert(TIMEZONE_JST)
         df_pos = self._filter_users(df_pos)
         if df_pos.empty:
             raise SpecError(-2101, "df_pos が空です")
@@ -464,20 +496,32 @@ class EventLogVisualizer:
         labels = []
 
         # 参加者数に応じて自動で線幅をスケール
-        n_users = max(1, df_pos["user_id"].nunique())
+        n_users = max(1, df_pos[COL_USER_ID].nunique())
         auto_linewidth = max(0.3, float(3.0 / np.sqrt(n_users)))
 
-        for idx, (user_id, group) in enumerate(df_pos.groupby("user_id")):
+        for idx, (user_id, group) in enumerate(df_pos.groupby(COL_USER_ID)):
             color = self._color_for(idx)
-            group = group.sort_values("second")
+            group = group.sort_values(COL_SECOND)
             segments = self._apply_breaks(group, tcfg.break_gap_factor)
             line_handle = None
             for seg in segments:
-                [line_handle] = ax.plot(seg["location_x"], seg["location_z"], linewidth=auto_linewidth, color=color)
+                [line_handle] = ax.plot(
+                    seg[COL_LOCATION_X],
+                    seg[COL_LOCATION_Z],
+                    linewidth=auto_linewidth,
+                    color=color,
+                )
             start = group.iloc[0]
             end = group.iloc[-1]
             # ax.scatter(start["location_x"], start["location_z"], s=tcfg.start_marker_size_px**2, marker="o", color=color, zorder=3)
-            ax.scatter(end["location_x"], end["location_z"], s=tcfg.end_marker_size_px**2, marker="^", color=color, zorder=3)
+            ax.scatter(
+                end[COL_LOCATION_X],
+                end[COL_LOCATION_Z],
+                s=tcfg.end_marker_size_px**2,
+                marker="^",
+                color=color,
+                zorder=3,
+            )
             if line_handle is not None:
                 handles.append(line_handle)
                 labels.append(str(user_id))
@@ -486,7 +530,7 @@ class EventLogVisualizer:
         ax.set_ylabel("z [m]")
         ax.set_aspect("equal")
         ax.set_title("参加者の軌跡")
-        ax.grid(True, linestyle="--", alpha=0.3)
+        ax.grid(True, linestyle=CHART_GRID_LINE_STYLE, alpha=CHART_GRID_ALPHA)
 
         fig.tight_layout()
         fig.savefig(out_path, dpi=rcfg.dpi)
