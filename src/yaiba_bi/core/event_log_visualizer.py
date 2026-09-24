@@ -5,16 +5,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple
 
-import matplotlib
+import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
-# TODO: japanize_matplotlibを使用しないようにする
-# import japanize_matplotlib
 import numpy as np
 import pandas as pd
-import matplotlib.dates as mdates
-
-import pytz
-from pandas.tseries.offsets import DateOffset
 
 from .config import TIMEZONE_JST, TIMEZONE_UTC
 from .config.columns import (
@@ -331,21 +325,6 @@ class EventLogVisualizer:
         if time_col not in df_cc.columns:
             raise SpecError(-2101, "cc データに時間列が存在しません")
 
-        # x軸の時刻を mm-dd HH:mm で表示するように設定
-        # 入力はUTCなのでJSTに変換
-        """
-        x = df_cc[time_col]
-        if pd.api.types.is_datetime64_any_dtype(x):
-            # UTC→JST
-            if x.dt.tz is None:
-                x = x.dt.tz_localize("UTC").dt.tz_convert(JST)
-            else:
-                x = x.dt.tz_convert(JST)
-        else:
-            # 文字列や数値の場合は一度datetimeに変換
-            x = pd.to_datetime(x, utc=True).dt.tz_convert(JST)
-        """
-
         ax.plot(
             df_cc[time_col],
             df_cc["cc"],
@@ -511,9 +490,7 @@ class EventLogVisualizer:
                     linewidth=auto_linewidth,
                     color=color,
                 )
-            start = group.iloc[0]
             end = group.iloc[-1]
-            # ax.scatter(start["location_x"], start["location_z"], s=tcfg.start_marker_size_px**2, marker="o", color=color, zorder=3)
             ax.scatter(
                 end[COL_LOCATION_X],
                 end[COL_LOCATION_Z],
