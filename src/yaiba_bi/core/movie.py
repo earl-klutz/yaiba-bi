@@ -5,6 +5,7 @@ from typing import Optional, Dict, Deque, Tuple
 from collections import deque
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
+from .config import columns, defaults, errors, layouts, paths, TIMEZONE_JST
 
 import numpy as np
 import pandas as pd
@@ -27,49 +28,49 @@ from .validation import (
 )
 
 # エラーコード
-EC_STORAGE_DST_INVALID = -2701
-EC_STORAGE_PERM = -2702
-EC_STORAGE_IO = -2704
-EC_STATS_UNKNOWN = -2400
-EC_CU_DATA_EMPTY = -2204
+EC_STORAGE_DST_INVALID = errors.EC_STORAGE_DST_INVALID
+EC_STORAGE_PERM = errors.EC_STORAGE_PERM
+EC_STORAGE_IO = errors.EC_STORAGE_IO
+EC_STATS_UNKNOWN = errors.EC_STATS_UNKNOWN
+EC_CU_DATA_EMPTY = errors.EC_CU_DATA_EMPTY
 
-TZ_JST = ZoneInfo("Asia/Tokyo")
+TZ_JST = TIMEZONE_JST
 
 @dataclass
 class Theme:
-    palette: str = "tab10"
-    bg_color: str = "#eeeeee"
-    font: str = "Meiryo"
-    font_size: int = 16
+    palette: str = layouts.MOVIE_PALETTE
+    bg_color: str = layouts.MOVIE_BACKGROUND_COLOR
+    font: str = layouts.DEFAULT_FONT_FAMILY
+    font_size: int = layouts.DEFAULT_FONT_SIZE
 
 @dataclass
 class MovieParams:
 
-    duration_real: int = 10800   # [sec] 解析対象上限
+    duration_real: int = defaults.DEFAULT_MOVIE_DURATION_REAL_SECONDS   # [sec] 解析対象上限
     format: str = "mp4"
-    fps: int = 30                 # ← ここは 30 固定で使う
-    duration_sec: int | None = None  # ← None/<=0 なら自動決定
-    auto_min_sec: int = 10           # ← 自動時の最小尺
-    auto_max_sec: int = 120           # ← 自動時の最大尺
+    fps: int = defaults.DEFAULT_MOVIE_FPS                 # ← ここは 30 固定で使う
+    duration_sec: int | None = defaults.DEFAULT_MOVIE_DURATION_SECONDS  # ← None/<=0 なら自動決定
+    auto_min_sec: int = defaults.DEFAULT_MOVIE_AUTO_MIN_SECONDS           # ← 自動時の最小尺
+    auto_max_sec: int = defaults.DEFAULT_MOVIE_AUTO_MAX_SECONDS           # ← 自動時の最大尺
     # bitrate は後方互換で解決（int/str/bitrate_kbps を許容）
-    bitrate: int | str = 2000
+    bitrate: int | str = defaults.DEFAULT_MOVIE_BITRATE_KBPS
 
 @dataclass
 class PointParams:
-    radius_px: int = 6
-    alpha: float = 1.0
+    radius_px: int = layouts.MOVIE_POINT_RADIUS_PX
+    alpha: float = layouts.MOVIE_POINT_ALPHA
 
 @dataclass
 class TrailParams:
-    length_real_seconds: int = 0
-    alpha_start: float = 1.0
-    alpha_end: float = 0.1
+    length_real_seconds: int = layouts.MOVIE_TRAIL_LENGTH_REAL_SECONDS
+    alpha_start: float = layouts.MOVIE_TRAIL_ALPHA_START
+    alpha_end: float = layouts.MOVIE_TRAIL_ALPHA_END
 
 @dataclass
 class IOParams:
-    output_filename: str = "movie"
+    output_filename: str = paths.MOVIE_FILENAME
     out_dir: Optional[str] = None
-    overwrite: bool = False
+    overwrite: bool = defaults.DEFAULT_OVERWRITE
 
 MovieIOParams = IOParams
 
@@ -97,7 +98,7 @@ def _resolve_bitrate_kbps(movie: MovieParams) -> int:
             return int(float(s))
         except ValueError:
             pass
-    return 2000
+    return defaults.DEFAULT_MOVIE_BITRATE_KBPS
 
 def _ensure_dir(p: str, logger: logging.Logger) -> None:
     """出力先ディレクトリを作成します。
@@ -167,7 +168,7 @@ class MovieGenerator:
 
         # event_day を命名用 YYYY-MM-DD に（JST最頻・フォールバック現在日）
         try:
-            ed = pd.to_datetime(df["event_day"], errors="coerce")
+            ed = pd.to_datetime(df[columns.COL_EVENT_DAY], errors="coerce")
             ed = ed.dt.tz_localize("Asia/Tokyo") if getattr(ed.dtype, "tz", None) is None else ed.dt.tz_convert("Asia/Tokyo")
             s = pd.Series(pd.to_datetime(ed, errors="coerce")).dt.date.astype("string")
             mode = s.mode()
@@ -179,9 +180,9 @@ class MovieGenerator:
         self._event_day_str = event_day
 
         # ソート & 後勝ち重複解決（秒は小文字 "s"）
-        df = df.sort_values(["second", "user_id"], ascending=[True, True])
-        df["sec_floor"] = df["second"].dt.floor("s")
-        df = df.drop_duplicates(subset=["sec_floor", "user_id"], keep="last")
+        df = df.sort_values([columns.COL_SECOND, columns.COL_USER_ID], ascending=[True, True])
+        df["sec_floor"] = df[columns.COL_SECOND].dt.floor("s")
+        df = df.drop_duplicates(subset=["sec_floor", columns.COL_USER_ID], keep="last")
 
         # 境界クリップ
         df = clip_by_boundary(df, self.boundary)
@@ -194,7 +195,7 @@ class MovieGenerator:
         df = df[(df["sec_floor"] >= t0) & (df["sec_floor"] <= t1)].copy()
 
         # 180秒未満は停止（設計仕様）
-        enforce_min_seconds(df, 180)
+        enforce_min_seconds(df, defaults.DEFAULT_MOVIE_MIN_UNIQUE_SECONDS)
         return df
 
     # --- 描画 ---
@@ -211,12 +212,12 @@ class MovieGenerator:
             Tuple[animation.FuncAnimation, Dict]:
                 アニメーションと描画情報です。
         """
-        xmn = self.boundary.get("location_x_min", float(df["location_x"].min()))
-        xmx = self.boundary.get("location_x_max", float(df["location_x"].max()))
-        zmn = self.boundary.get("location_z_min", float(df["location_z"].min()))
-        zmx = self.boundary.get("location_z_max", float(df["location_z"].max()))
+        xmn = self.boundary.get("location_x_min", float(df[columns.COL_LOCATION_X].min()))
+        xmx = self.boundary.get("location_x_max", float(df[columns.COL_LOCATION_X].max()))
+        zmn = self.boundary.get("location_z_min", float(df[columns.COL_LOCATION_Z].min()))
+        zmx = self.boundary.get("location_z_max", float(df[columns.COL_LOCATION_Z].max()))
 
-        users = pd.Index(df["user_id"].unique())
+        users = pd.Index(df[columns.COL_USER_ID].unique())
         cmap = plt.get_cmap(self.theme.palette, max(10, len(users)))
         uid_to_rgba = {uid: cmap(i % cmap.N) for i, uid in enumerate(users)}
 
@@ -239,10 +240,10 @@ class MovieGenerator:
         else:
             trail_buf = None  # type: ignore[assignment]
 
-        dpi = 120
-        fig, ax = plt.subplots(figsize=(960/dpi, 720/dpi), dpi=dpi)
+        dpi = layouts.MOVIE_DPI
+        fig, ax = plt.subplots(figsize=(layouts.MOVIE_WIDTH_PX/dpi, layouts.MOVIE_HEIGHT_PX/dpi), dpi=dpi)
         fig.patch.set_facecolor(self.theme.bg_color)
-        ax.set_facecolor("white")
+        ax.set_facecolor(layouts.MOVIE_AXES_BACKGROUND_COLOR)
         ax.set_xlim(xmn, xmx); ax.set_ylim(zmn, zmx)
         ax.set_xlabel("X [m]"); ax.set_ylabel("Z [m]")
         title = ax.text(0.5, 1.02, "YAIBA: ユーザー位置 2Dプロット", transform=ax.transAxes, ha="center", va="bottom")
@@ -250,7 +251,7 @@ class MovieGenerator:
 
         curr = ax.scatter([], [], s=self.point.radius_px**2, alpha=self.point.alpha)
         if use_trail:
-            trail_sc = ax.scatter([], [], s=(self.point.radius_px * 0.35) ** 2)
+            trail_sc = ax.scatter([], [], s=(self.point.radius_px * layouts.MOVIE_TRAIL_POINT_SCALE) ** 2)
         else:
             trail_sc = ax.scatter([], [], s=1, alpha=0)  
 
@@ -270,16 +271,16 @@ class MovieGenerator:
             # 秒ごとのデータを取得（なければ空DF）
             df_now = by_sec.get(ts)
             if df_now is None:
-                df_now = pd.DataFrame(columns=["user_id", "location_x", "location_z"])
+                df_now = pd.DataFrame(columns=[columns.COL_USER_ID, columns.COL_LOCATION_X, columns.COL_LOCATION_Z])
 
             if use_trail:
                 if df_now is None:
-                    df_now = pd.DataFrame(columns=["user_id", "location_x", "location_z"])
+                    df_now = pd.DataFrame(columns=[columns.COL_USER_ID, columns.COL_LOCATION_X, columns.COL_LOCATION_Z])
                 trail_buf.append(df_now)
 
             if not df_now.empty:
-                offs = np.c_[df_now["location_x"].to_numpy(), df_now["location_z"].to_numpy()]
-                cols = [uid_to_rgba[uid] for uid in df_now["user_id"]]
+                offs = np.c_[df_now[columns.COL_LOCATION_X].to_numpy(), df_now[columns.COL_LOCATION_Z].to_numpy()]
+                cols = [uid_to_rgba[uid] for uid in df_now[columns.COL_USER_ID]]
                 curr.set_offsets(offs); curr.set_facecolors(cols)
             else:
                 curr.set_offsets(np.empty((0, 2))); curr.set_facecolors([])
@@ -290,7 +291,7 @@ class MovieGenerator:
                 for k, dfk in enumerate(trail_buf):
                     if dfk is None or dfk.empty: continue
                     alpha = self.trail.alpha_start + (self.trail.alpha_end - self.trail.alpha_start) * (k / max(1, K-1))
-                    for uid, x, z in zip(dfk["user_id"], dfk["location_x"], dfk["location_z"]):
+                    for uid, x, z in zip(dfk[columns.COL_USER_ID], dfk[columns.COL_LOCATION_X], dfk[columns.COL_LOCATION_Z]):
                         r,g,b,_ = uid_to_rgba[uid]; xs.append(x); zs.append(z); cols.append((r,g,b,alpha))
                 if xs:
                     trail_sc.set_offsets(np.c_[np.array(xs), np.array(zs)]); trail_sc.set_facecolors(np.array(cols))
@@ -342,7 +343,7 @@ class MovieGenerator:
             br = _resolve_bitrate_kbps(self.movie)
             writer = animation.FFMpegWriter(
                 fps=self.movie.fps, bitrate=br,
-                codec="libx264", extra_args=["-pix_fmt", "yuv420p", "-movflags", "+faststart", "-y"],
+                codec=defaults.DEFAULT_MOVIE_CODEC, extra_args=["-pix_fmt", defaults.DEFAULT_MOVIE_PIXEL_FORMAT, "-movflags", defaults.DEFAULT_MOVIE_MOVFLAGS, "-y"],
             )
 
             # 総フレーム数の安全取得
