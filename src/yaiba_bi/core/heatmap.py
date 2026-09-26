@@ -27,8 +27,8 @@ from . import config
 
 
 fonts = fm.findSystemFonts()
-# font_list = [font for font in fonts if "NotoSansCJK-Regular.ttc" in font]
-font_list = [font for font in fonts if "Hiragino Sans" in font]  # PR前に↑と入れ替えの上、削除
+font_list = [font for font in fonts if "NotoSansCJK-Regular.ttc" in font]
+# font_list = [font for font in fonts if "Hiragino Sans" in font]  # PR前に↑と入れ替えの上、削除
 
 if font_list:
     fm.fontManager.addfont(font_list[0])
