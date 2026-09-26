@@ -2,11 +2,6 @@
 
 GoogleColab上で使用するディレクトリを定数で提供する
 
-Attributes:
-    BASE (str): ファイルIO系ディレクトリのベース
-    INPUT (str): アップロードしたファイルを格納するディレクトリ
-    INTERMEDIATE (str): 中間ファイルを一時格納するディレクトリ
-    OUTPUT (str): 処理結果のファイルを格納するディレクトリ
 """
 
 
@@ -14,12 +9,7 @@ import os
 import shutil
 from typing import Iterator
 
-
-# ディレクトリ定数
-BASE = "YAIBA_data"
-INPUT = f"{BASE}/input"
-INTERMEDIATE = f"{BASE}/intermediate"
-OUTPUT = f"{BASE}/output"
+from yaiba_bi.core import config
 
 
 # 定数イテレータ
@@ -32,9 +22,9 @@ def __iters() -> Iterator[str]:
         INPUT -> INTERMEDIATE -> OUTPUT の順で値を返す
     """
 
-    yield INPUT
-    yield INTERMEDIATE
-    yield OUTPUT
+    yield config.paths.COLAB_INPUT
+    yield config.paths.COLAB_INTERMEDIATE
+    yield config.paths.COLAB_OUTPUT
 
 
 # ディレクトリ初期設定
@@ -57,4 +47,4 @@ def finalize() -> None:
 
     """
 
-    shutil.rmtree(BASE)
+    shutil.rmtree(config.paths.COLAB_BASE)
