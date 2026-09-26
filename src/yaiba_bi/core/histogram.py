@@ -23,7 +23,6 @@ from pathlib import Path
 from .naming import RESULT_ROOT
 from typing import Optional, Dict, Tuple, Union
 from zoneinfo import ZoneInfo
-from .config import columns, defaults, errors, layouts, paths, TIMEZONE_JST
 
 import numpy as np
 import pandas as pd
@@ -33,39 +32,39 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 # ====== エラーコード（抜粋） ======
-EC_STORAGE_PERM = errors.EC_STORAGE_PERM
-EC_STORAGE_IO   = errors.EC_STORAGE_IO
-EC_STATS_INPUT  = errors.EC_STATS_INPUT
+EC_STORAGE_PERM = -2702
+EC_STORAGE_IO   = -2704
+EC_STATS_INPUT  = -2301
 EC_STATS_EMPTY  = -2302
 EC_STATS_UNKNOWN= -2399
 
-JST = TIMEZONE_JST
+JST = ZoneInfo("Asia/Tokyo")
 
 # ====== パラメータ定義 ======
 @dataclass
 class IOParams:
     # out_dir を未指定(None)なら、設計書既定の <YAIBA_RESULTS_DIR>/histograms を用いる
     out_dir: Optional[str] = None
-    output_filename: str = paths.HIST_FILENAME  # 出力ベース名（ラッパーで未指定時に使用）
-    png_dpi: int = layouts.DEFAULT_IMAGE_DPI
-    csv_encoding: str = defaults.DEFAULT_CSV_ENCODING
-    overwrite: bool = defaults.DEFAULT_OVERWRITE  # 将来拡張用（現状は上書き保存の既定挙動のまま）
+    output_filename: str = "hist_dwell"  # 出力ベース名（ラッパーで未指定時に使用）
+    png_dpi: int = 144
+    csv_encoding: str = "utf-8"
+    overwrite: bool = False  # 将来拡張用（現状は上書き保存の既定挙動のまま）
 HistIOParams = IOParams
 
 @dataclass
 class HistParams:
     # demo.py 互換パラメータ
-    bins: Optional[int] = defaults.DEFAULT_HISTOGRAM_BINS        # None→matplotlib の "auto"
+    bins: Optional[int] = None        # None→matplotlib の "auto"
     dpi: Optional[int] = None         # fig.set_dpi / savefig の優先候補
     width: Optional[float] = None     # dpi 指定時は px、未指定時は inch
     height: Optional[float] = None    # 上に同じ
 
     # 直接指定系
     figsize: Tuple[float, float] = (10, 6)  # width/height があれば上書き
-    edgecolor: str = layouts.HISTOGRAM_EDGE_COLOR
-    title: str = layouts.HISTOGRAM_TITLE
-    x_label: str = layouts.HISTOGRAM_X_LABEL
-    y_label: str = layouts.HISTOGRAM_Y_LABEL
+    edgecolor: str = "black"
+    title: str = "YAIBA: 滞在時間の分布（JST, 1秒分解能）"
+    x_label: str = "在室時間 [minutes]"
+    y_label: str = "人数 [counts]"
 
 @dataclass
 class VerParams:
@@ -77,7 +76,7 @@ __all__ = [
 ]
 
 # ====== ユーティリティ ======
-REQUIRED_COLS = {columns.COL_USER_ID, columns.COL_SECOND}
+REQUIRED_COLS = {"user_id", "second"}
 
 
 def require_columns(df: pd.DataFrame):
@@ -108,7 +107,7 @@ def _default_hist_out_dir() -> str:
     ※ 環境変数が無ければ naming.RESULT_ROOT を既定値に
     """
     base = Path(os.getenv("YAIBA_RESULT_ROOT", RESULT_ROOT))
-    return str(base / paths.HIST_OUTPUT_DIR)
+    return str(base / "histograms")
 
 
 def build_paths(io: IOParams, base: str) -> Tuple[str, str]:
@@ -123,8 +122,8 @@ def build_paths(io: IOParams, base: str) -> Tuple[str, str]:
     """
     out_dir = io.out_dir or _default_hist_out_dir()
     Path(out_dir).mkdir(parents=True, exist_ok=True)
-    png_path = str(Path(out_dir) / f"{base}{paths.FILE_EXT_PNG}")
-    csv_path = str(Path(out_dir) / f"{base}{paths.FILE_EXT_CSV}")
+    png_path = str(Path(out_dir) / f"{base}.png")
+    csv_path = str(Path(out_dir) / f"{base}.csv")
     return png_path, csv_path
 
 
@@ -142,19 +141,19 @@ def to_jst_floor_seconds(df: pd.DataFrame, logger: logging.Logger) -> pd.DataFra
     返却: [second(JST), sec_floor(JST), user_id, event_day(YYYY-MM-DD)]
     """
     df = df.copy()
-    sec = pd.to_datetime(df[columns.COL_SECOND], errors="coerce")
+    sec = pd.to_datetime(df["second"], errors="coerce")
     if sec.dt.tz is None:
         sec = sec.dt.tz_localize(JST)
     else:
         sec = sec.dt.tz_convert(JST)
-    df[columns.COL_SECOND] = sec
+    df["second"] = sec
 
-    df = df.sort_values([columns.COL_SECOND, columns.COL_USER_ID])  # 後勝ち安定ソート
-    df["sec_floor"] = df[columns.COL_SECOND].dt.floor("s")
-    df = df.drop_duplicates(subset=["sec_floor", columns.COL_USER_ID], keep="last")
+    df = df.sort_values(["second", "user_id"])  # 後勝ち安定ソート
+    df["sec_floor"] = df["second"].dt.floor("s")
+    df = df.drop_duplicates(subset=["sec_floor", "user_id"], keep="last")
 
-    if columns.COL_EVENT_DAY not in df.columns:
-        df[columns.COL_EVENT_DAY] = df["sec_floor"].dt.date.astype(str)
+    if "event_day" not in df.columns:
+        df["event_day"] = df["sec_floor"].dt.date.astype(str)
     return df
 
 
@@ -219,15 +218,15 @@ class HistogramGenerator:
         require_columns(df)
         dfj = to_jst_floor_seconds(df, self.logger)
 
-        dwell_sec = dfj.groupby(columns.COL_USER_ID)["sec_floor"].nunique().rename("dwell_seconds")
+        dwell_sec = dfj.groupby("user_id")["sec_floor"].nunique().rename("dwell_seconds")
         out = dwell_sec.to_frame()
         out["dwell_minutes"] = out["dwell_seconds"] / 60.0
 
         # 代表 event_day を選定（ユーザ×日で出現数が最大の日）
-        by_user_day = dfj.groupby([columns.COL_USER_ID, columns.COL_EVENT_DAY]).size().rename("cnt").reset_index()
-        rep = by_user_day.loc[by_user_day.groupby(columns.COL_USER_ID)["cnt"].idxmax(), [columns.COL_USER_ID, columns.COL_EVENT_DAY]]
-        out = out.merge(rep, on=columns.COL_USER_ID, how="left")
-        return out.reset_index()[[columns.COL_USER_ID, "dwell_seconds", "dwell_minutes", columns.COL_EVENT_DAY]]
+        by_user_day = dfj.groupby(["user_id", "event_day"]).size().rename("cnt").reset_index()
+        rep = by_user_day.loc[by_user_day.groupby("user_id")["cnt"].idxmax(), ["user_id", "event_day"]]
+        out = out.merge(rep, on="user_id", how="left")
+        return out.reset_index()[["user_id", "dwell_seconds", "dwell_minutes", "event_day"]]
 
     # --- 描画 ---
     def draw_histogram(
@@ -243,7 +242,7 @@ class HistogramGenerator:
                 図、軸、統計量です。
         """
         # ピクセル基準に統一（width/height は px と解釈）
-        dpi_base = float(self.hist.dpi or self.io.png_dpi or layouts.DEFAULT_IMAGE_DPI)
+        dpi_base = float(self.hist.dpi or self.io.png_dpi or 144)
         if self.hist.width and self.hist.height:
             figsize = (float(self.hist.width) / dpi_base,
                        float(self.hist.height) / dpi_base)
@@ -269,7 +268,7 @@ class HistogramGenerator:
         }
         for v, label in [(stats["mean"], "Mean"), (stats["median"], "Median"), (stats["p95"], "P95")]:
             if not (isinstance(v, float) and math.isnan(v)):
-                ax.axvline(v, linestyle=layouts.HISTOGRAM_REFERENCE_LINE_STYLE)
+                ax.axvline(v, linestyle="--")
                 ymax = ax.get_ylim()[1]
                 ax.text(v, ymax * 0.95, label, rotation=90, va="top")
         return fig, ax, stats
@@ -304,7 +303,7 @@ class HistogramGenerator:
             base = f"{output_basename}-{now_str}_{self.ver.version}"
             png_path, csv_path = build_paths(self.io, base)
 
-            save_dpi = self.io.png_dpi or self.hist.dpi or layouts.DEFAULT_IMAGE_DPI
+            save_dpi = self.io.png_dpi or self.hist.dpi or 144
             fig.savefig(png_path, dpi=save_dpi, bbox_inches="tight")
             df_summary.to_csv(csv_path, index=False, encoding=self.io.csv_encoding)
 
@@ -394,8 +393,8 @@ if __name__ == "__main__":
     # ダミーデータ例: 3ユーザ（A/B/C）
     rng = pd.date_range("2025-10-06 23:59:00+09:00", periods=301, freq="S")
     df_demo = pd.DataFrame({
-        columns.COL_SECOND: np.concatenate([rng, rng, rng[:120]]),
-        columns.COL_USER_ID: ["A"]*301 + ["B"]*301 + ["C"]*120,
+        "second": np.concatenate([rng, rng, rng[:120]]),
+        "user_id": ["A"]*301 + ["B"]*301 + ["C"]*120,
     })
     res = run_histogram_mvp(df=df_demo, output_basename="demo_hist")
     print(json.dumps(res, ensure_ascii=False, indent=2))
