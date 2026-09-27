@@ -1,1 +1,1 @@
-::: yaiba_bi.core.yaiba_loader.schema_intermediate
+::: yaiba_bi.core.config.schemas.LAYOUT_INTERMEDIATE
