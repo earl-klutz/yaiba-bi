@@ -36,21 +36,11 @@ YAIBA が出力した生データの型。値はすべて JSON から読み込�
 | 列名 | 型 | 意味・値 |
 |---|---|---|
 | ``timestamp`` | ``float`` | ログに記録されたローカル時刻を UTC とみなして変換したエポック秒 |
-| ``player_id`` | ``int`` | 各ユーザーに自動付与されるID (VRChat がインスタンス内で割り当てる) |
-| ``pseudo_user_name`` | ``str`` | 匿名化したユーザー名 |
-| ``location_x`` | ``float`` | ユーザーの位置 X 座標 [m] |
-| ``location_y`` | ``float`` | ユーザーの位置 Y 座標 (高さ方向) [m] |
-| ``location_z`` | ``float`` | ユーザーの位置 Z 座標 [m] |
-| ``rotation_1`` | ``float`` | 視点の向き。X 軸まわり (ピッチ: 上下) [度]。0 以上 360 未満 |
-| ``rotation_2`` | ``float`` | 視点の向き。Y 軸まわり (ヨー: 左右) [度]。0 以上 360 未満 |
-| ``rotation_3`` | ``float`` | 視点の向き。Z 軸まわり (ロール: 傾き) [度]。0 以上 360 未満 |
-| ``velocity_x`` | ``float`` | X 方向の位置変化 |
-| ``velocity_y`` | ``float`` | Y 方向の位置変化 |
-| ``velocity_z`` | ``float`` | Z 方向の位置変化 |
-| ``is_vr`` | ``bool`` | True: VR モードで参加 / False: デスクトップで参加 |
+| ``player_id`` | ``int`` | LAYOUT_INTERMEDIATE の ``user_id`` と同じ |
+| ``pseudo_user_name`` | ``str`` | LAYOUT_INTERMEDIATE の ``user_name`` と同じ |
+| ``location_x`` 〜 ``velocity_z`` | ``float`` | LAYOUT_INTERMEDIATE と同じ (9列) |
+| ``is_vr`` | ``bool`` | LAYOUT_INTERMEDIATE と同じ |
 | ``type_id`` | ``str`` | レコード種別。常に ``"yaiba/player_position"`` |
-
-単位・値域は設計書「データ取り込み・前処理(I-O標準化)」の定義に従う。
 
 ### attendance (3列)
 
@@ -59,7 +49,7 @@ YAIBA が出力した生データの型。値はすべて JSON から読み込�
 | 列名 | 型 | 意味・値 |
 |---|---|---|
 | ``timestamp`` | ``float`` | イベント発生時刻 (ログに記録されたローカル時刻) を UTC とみなして変換したエポック秒 |
-| ``pseudo_user_name`` | ``str`` | 匿名化した表示名。position と同じ方法で生成される |
+| ``pseudo_user_name`` | ``str`` | LAYOUT_INTERMEDIATE の ``user_name`` と同じ |
 | ``type_id`` | ``str`` | ``"vrc/player_join"`` (参加) / ``"vrc/player_left"`` (離脱) |
 
 ## LAYOUT_INTERMEDIATE の型
@@ -73,12 +63,22 @@ YAIBA が出力した生データの型。値はすべて JSON から読み込�
 | 列名 | 型 | 意味・値 |
 |---|---|---|
 | ``second`` | ``datetime`` | ログデータが取得された時刻。JST|
-| ``user_id`` | ``int`` | ``player_id`` を改名したもの |
-| ``user_name`` | ``str`` | ``pseudo_user_name`` を改名したもの |
-| ``location_x`` 〜 ``velocity_z`` | ``float`` | 生データと同じ値 (9列) |
-| ``is_vr`` | ``bool`` | 生データと同じ値 |
+| ``user_id`` | ``int`` | 各ユーザーに自動付与されるID (VRChat がインスタンス内で割り当てる)。生データの ``player_id`` |
+| ``user_name`` | ``str`` | 匿名化したユーザー名。生データの ``pseudo_user_name`` |
+| ``location_x`` | ``float`` | ユーザーの位置 X 座標 [m] |
+| ``location_y`` | ``float`` | ユーザーの位置 Y 座標 (高さ方向) [m] |
+| ``location_z`` | ``float`` | ユーザーの位置 Z 座標 [m] |
+| ``rotation_1`` | ``float`` | 視点の向き。X 軸まわり (ピッチ: 上下) [度]。0 以上 360 未満 |
+| ``rotation_2`` | ``float`` | 視点の向き。Y 軸まわり (ヨー: 左右) [度]。0 以上 360 未満 |
+| ``rotation_3`` | ``float`` | 視点の向き。Z 軸まわり (ロール: 傾き) [度]。0 以上 360 未満 |
+| ``velocity_x`` | ``float`` | X 方向の位置変化 |
+| ``velocity_y`` | ``float`` | Y 方向の位置変化 |
+| ``velocity_z`` | ``float`` | Z 方向の位置変化 |
+| ``is_vr`` | ``bool`` | True: VR モードで参加 / False: デスクトップで参加 |
 | ``event_day`` | ``date`` | イベント開催日 (ログ取得日)。JST |
 | ``is_error`` | ``bool`` | True: レコードに不備が含まれる (値が LAYOUT_YAIBA の型と一致しない) |
+
+単位・値域は設計書「データ取り込み・前処理(I-O標準化)」の定義に従う。
 
 ### attendance (4列)
 
@@ -86,7 +86,7 @@ YAIBA が出力した生データの型。値はすべて JSON から読み込�
 |---|---|---|
 | ``second`` | ``datetime`` | 参加・離脱した時刻。JST |
 | ``action`` | ``str`` | ``"join"`` (参加) / ``"left"`` (離脱)。``type_id`` を変換したもの |
-| ``user_name`` | ``str`` | ``pseudo_user_name`` を改名したもの |
+| ``user_name`` | ``str`` | position の ``user_name`` と同じ |
 | ``is_error`` | ``bool`` | position と同じ |
 
 ``action`` には変換できない場合の ``"unknown"`` も定義されているが、
